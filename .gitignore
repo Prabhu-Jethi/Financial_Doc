@@ -1,0 +1,17 @@
+.env
+
+
+venv/
+node_modules/
+
+
+originals/
+docs/
+src/
+pyproject.toml
+.python-version
+
+
+package-lock.json
+package.json
+uv.lock
