@@ -1,0 +1,21 @@
+[project]
+name = "financial-document-intelligence"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Prabhu-Jethi", email = "prabhujethi9@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142.2",
+    "pandas>=3.0.6",
+    "pgvector>=0.5.0",
+]
+
+[project.scripts]
+financial-document-intelligence = "financial_document_intelligence:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
