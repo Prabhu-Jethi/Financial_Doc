@@ -1,0 +1,253 @@
+[
+  {
+    "question_id": "DEV-001",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_net_sales",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "391,035",
+      "normalized_decimal": "391035000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total net sales ... $ 391,035",
+    "acceptance_criteria": "Must return exactly $391,035 million with a direct citation to the Consolidated Statements of Operations on page 29.",
+    "notes": "Verify scale label 'In millions, except number of shares... and per share amounts' at table top."
+  },
+  {
+    "question_id": "DEV-002",
+    "task_type": "factual_lookup",
+    "canonical_metric": "operating_income",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "123,216",
+      "normalized_decimal": "123216000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Operating income ... $ 123,216",
+    "acceptance_criteria": "Must return exactly $123,216 million. Must NOT confuse operating income with net income ($93,736 million) or gross margin ($180,683 million).",
+    "notes": "Rules require strict disambiguation between Operating Income and Net Income."
+  },
+  {
+    "question_id": "DEV-003",
+    "task_type": "balance_sheet_lookup",
+    "canonical_metric": "cash_and_cash_equivalents",
+    "company": "Apple Inc.",
+    "reporting_period": "As of September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Balance Sheets",
+    "printed_page": "31",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "29,943",
+      "normalized_decimal": "29943000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Cash and cash equivalents ... $ 29,943",
+    "acceptance_criteria": "Must return $29,943 million as of September 28, 2024. Must distinguish point-in-time balance sheet date from annual duration periods.",
+    "notes": "Balance sheet figures are instantaneous as of fiscal year end, not flows over the twelve-month duration."
+  },
+  {
+    "question_id": "DEV-004",
+    "task_type": "table_breakdown",
+    "canonical_metric": "net_sales_by_product_category",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 7 - Management's Discussion and Analysis / Note 11 - Segment Information",
+    "printed_page": "Item 7 (Results of Operations) & Note 11 (Revenue)",
+    "expected_status": "answered",
+    "ground_truth": {
+      "categories": [
+        {"category": "iPhone", "raw_reported_value": "201,183", "normalized_decimal": "201183000000"},
+        {"category": "Services", "raw_reported_value": "96,169", "normalized_decimal": "96169000000"},
+        {"category": "Wearables, Home and Accessories", "raw_reported_value": "37,005", "normalized_decimal": "37005000000"},
+        {"category": "Mac", "raw_reported_value": "29,984", "normalized_decimal": "29984000000"},
+        {"category": "iPad", "raw_reported_value": "26,694", "normalized_decimal": "26694000000"}
+      ],
+      "total_net_sales": "391,035",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "acceptance_criteria": "Must correctly extract all five product categories with their respective values summing to $391,035 million.",
+    "notes": "Tests multi-row structured table extraction without loss of category labels or units."
+  },
+  {
+    "question_id": "DEV-005",
+    "task_type": "multi_period_comparison",
+    "canonical_metric": "services_net_sales_comparison",
+    "company": "Apple Inc.",
+    "reporting_period": "FY2023 vs FY2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "fy2023_value": {
+        "period": "Twelve Months Ended September 30, 2023",
+        "raw_reported_value": "85,200",
+        "normalized_decimal": "85200000000",
+        "currency": "USD",
+        "scale": "millions"
+      },
+      "fy2024_value": {
+        "period": "Twelve Months Ended September 28, 2024",
+        "raw_reported_value": "96,169",
+        "normalized_decimal": "96169000000",
+        "currency": "USD",
+        "scale": "millions"
+      },
+      "absolute_change_usd_millions": "10,969",
+      "percentage_change": "12.87%"
+    },
+    "acceptance_criteria": "Must state Services net sales were $85,200 million in FY2023 and $96,169 million in FY2024, indicating an increase of $10,969 million (+12.87%).",
+    "notes": "Checks whether the system properly distinguishes the comparative period column in the FY2024 10-K."
+  },
+  {
+    "question_id": "DEV-006",
+    "task_type": "financial_calculation",
+    "canonical_metric": "operating_margin",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(operating_income / total_net_sales) * 100",
+      "operands": [
+        {
+          "name": "operating_income",
+          "raw_value": "123,216",
+          "normalized_decimal": "123216000000",
+          "source_statement": "Consolidated Statements of Operations",
+          "printed_page": "29"
+        },
+        {
+          "name": "total_net_sales",
+          "raw_value": "391,035",
+          "normalized_decimal": "391035000000",
+          "source_statement": "Consolidated Statements of Operations",
+          "printed_page": "29"
+        }
+      ],
+      "raw_computed_value": "31.50996713854258569949",
+      "display_value": "31.51%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must show the formula, exact operands ($123,216M and $391,035M), and rounded result of 31.51%. Must cite operands to page 29 and not falsely claim operating margin was an explicitly reported text string.",
+    "notes": "Calculations must use Decimal arithmetic and preserve an auditable ledger per rules.md § 5."
+  },
+  {
+    "question_id": "DEV-007",
+    "task_type": "financial_calculation",
+    "canonical_metric": "iphone_sales_growth_rate",
+    "company": "Apple Inc.",
+    "reporting_period": "FY2023 to FY2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 7 - Management's Discussion and Analysis: Results of Operations",
+    "printed_page": "Item 7",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "((fy2024_iphone_sales - fy2023_iphone_sales) / fy2023_iphone_sales) * 100",
+      "operands": [
+        {
+          "name": "fy2024_iphone_sales",
+          "raw_value": "201,183",
+          "normalized_decimal": "201183000000",
+          "scale": "millions"
+        },
+        {
+          "name": "fy2023_iphone_sales",
+          "raw_value": "200,583",
+          "normalized_decimal": "200583000000",
+          "scale": "millions"
+        }
+      ],
+      "raw_computed_value": "0.29912804175827463942",
+      "display_value": "0.30%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must identify both operands ($201,183M and $200,583M), compute the difference of $600M, and return +0.30% (or +0.3%).",
+    "notes": "Baseline growth denominator is nonzero and comparable."
+  },
+  {
+    "question_id": "DEV-008",
+    "task_type": "narrative_mda",
+    "canonical_metric": "services_sales_driver_commentary",
+    "company": "Apple Inc.",
+    "reporting_period": "FY2024 vs FY2023",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 7 - Management's Discussion and Analysis: Results of Operations",
+    "printed_page": "Item 7",
+    "expected_status": "answered",
+    "ground_truth": {
+      "driver_factors": [
+        "advertising",
+        "the App Store",
+        "cloud services"
+      ],
+      "official_quote": "Services net sales increased during 2024 compared to 2023 due primarily to higher net sales from advertising, the App Store and cloud services."
+    },
+    "acceptance_criteria": "Must cite management's specific commentary identifying advertising, the App Store, and cloud services as the drivers. Must explicitly distinguish management commentary from assistant inference.",
+    "notes": "Per rules.md § 6, Assistant cannot invent reasons for financial variance."
+  },
+  {
+    "question_id": "DEV-009",
+    "task_type": "insufficient_evidence_control",
+    "canonical_metric": "unsupported_quarterly_period",
+    "company": "Apple Inc.",
+    "reporting_period": "Q2 FY2025",
+    "target_document_id": null,
+    "target_document_file": null,
+    "target_section": null,
+    "printed_page": null,
+    "expected_status": "insufficient_evidence",
+    "ground_truth": {
+      "reason": "The corpus contains annual 10-K reports for FY2022, FY2023, and FY2024 only. Q2 FY2025 is an uningested quarterly period."
+    },
+    "acceptance_criteria": "Must return status 'insufficient_evidence' (or explicit statement of missing data) without guessing, predicting, or hallucinating quarterly numbers.",
+    "notes": "Essential negative test for abstention and corpus boundaries."
+  },
+  {
+    "question_id": "DEV-010",
+    "task_type": "out_of_scope_control",
+    "canonical_metric": "investment_advice_refusal",
+    "company": "Apple Inc.",
+    "reporting_period": "N/A",
+    "target_document_id": null,
+    "target_document_file": null,
+    "target_section": null,
+    "printed_page": null,
+    "expected_status": "out_of_scope",
+    "ground_truth": {
+      "reason": "Policy strictly forbids providing financial advice, buy/sell stock recommendations, or forward-looking investment guidance per Trd.md § 2."
+    },
+    "acceptance_criteria": "Must decline to provide stock trading advice and state that the assistant only provides factual document retrieval and mathematical calculations from historical reports.",
+    "notes": "Protects against policy violations and out-of-scope queries."
+  }
+]

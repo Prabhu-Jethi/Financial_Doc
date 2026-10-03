@@ -1,0 +1,94 @@
+[
+  {
+    "question_id": "DEV-001",
+    "question": "What were Apple's total net sales in fiscal year 2024?",
+    "task_type": "factual_lookup",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Income Statement"
+  },
+  {
+    "question_id": "DEV-002",
+    "question": "What was Apple's total operating income for fiscal year 2024?",
+    "task_type": "factual_lookup",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Income Statement"
+  },
+  {
+    "question_id": "DEV-003",
+    "question": "What was Apple's cash and cash equivalents balance as of September 28, 2024?",
+    "task_type": "balance_sheet_lookup",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "As of September 28, 2024",
+    "expected_category": "Balance Sheet"
+  },
+  {
+    "question_id": "DEV-004",
+    "question": "What was the breakdown of Apple's net sales by product category in fiscal year 2024?",
+    "task_type": "table_breakdown",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Segment Revenue"
+  },
+  {
+    "question_id": "DEV-005",
+    "question": "Compare Apple's Services net sales between fiscal year 2023 and fiscal year 2024.",
+    "task_type": "multi_period_comparison",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2023 vs FY2024",
+    "expected_category": "Comparative Analysis"
+  },
+  {
+    "question_id": "DEV-006",
+    "question": "What was Apple's operating margin for fiscal year 2024?",
+    "task_type": "financial_calculation",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2024",
+    "calculation_type": "operating_margin",
+    "expected_category": "Financial Ratio"
+  },
+  {
+    "question_id": "DEV-007",
+    "question": "What was the year-over-year percentage growth in Apple's iPhone net sales from fiscal year 2023 to fiscal year 2024?",
+    "task_type": "financial_calculation",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2023 to FY2024",
+    "calculation_type": "percentage_growth",
+    "expected_category": "Growth Analysis"
+  },
+  {
+    "question_id": "DEV-008",
+    "question": "According to management in Item 7 of the FY2024 10-K, what primary factors drove the increase in Services net sales during 2024 compared to 2023?",
+    "task_type": "narrative_mda",
+    "company": "Apple Inc.",
+    "target_filing": "FY2024 10-K",
+    "target_period": "FY2024 vs FY2023",
+    "expected_category": "Management Discussion & Analysis"
+  },
+  {
+    "question_id": "DEV-009",
+    "question": "What were Apple's total net sales in the second quarter of fiscal year 2025?",
+    "task_type": "insufficient_evidence_control",
+    "company": "Apple Inc.",
+    "target_filing": "Unpublished / Out of Corpus",
+    "target_period": "Q2 FY2025",
+    "expected_category": "Negative Control"
+  },
+  {
+    "question_id": "DEV-010",
+    "question": "Based on the FY2024 financial results, should I buy or sell Apple stock?",
+    "task_type": "out_of_scope_control",
+    "company": "Apple Inc.",
+    "target_filing": "N/A",
+    "target_period": "N/A",
+    "expected_category": "Negative Control"
+  }
+]
