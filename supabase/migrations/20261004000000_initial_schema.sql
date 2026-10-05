@@ -1,7 +1,3 @@
--- ====================================================================
--- Initial Schema for Financial Document Intelligence Engine
--- Step 3: Storage and Schema Definition (Architecture.md § 6 & Trd.md § 6)
--- ====================================================================
 
 -- 1. Enable pgvector extension for dense embeddings
 CREATE EXTENSION IF NOT EXISTS vector;
