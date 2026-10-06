@@ -29,7 +29,7 @@ def list_document():
             for r in rows
     ]
 
-@router.get('/{document_id}/{pdf_url}')
+@router.get('/{document_id}/pdf_url')
 def get_document_pdf_url(document_id: str):
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
