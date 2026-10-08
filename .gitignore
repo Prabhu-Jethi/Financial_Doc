@@ -36,6 +36,17 @@ data/originals/
 data/parsed/
 docs/
 
+pyproject.toml
+.python-version
+
+
+package-lock.json
+package.json
+uv.lock
+
+.next/
+__pycache__/
+
 # ====================================================================
 # OS & Editor Junk
 # ====================================================================

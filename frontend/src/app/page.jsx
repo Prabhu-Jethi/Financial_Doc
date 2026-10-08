@@ -1,28 +1,37 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-
-const SAMPLE_QUESTIONS = [
-  { id: "DEV-001", label: "FY24 Total Net Sales", q: "What were Apple's total net sales in fiscal year 2024?" },
-  { id: "DEV-002", label: "FY24 Operating Income", q: "What was Apple's total operating income for fiscal year 2024?" },
-  { id: "DEV-005", label: "Services Growth (FY23 vs FY24)", q: "Compare Apple's Services net sales between fiscal year 2023 and fiscal year 2024." },
-  { id: "DEV-006", label: "Operating Margin Calc", q: "What was Apple's operating margin for fiscal year 2024?" },
-  { id: "DEV-008", label: "MD&A Services Drivers", q: "According to management in Item 7 of the FY2024 10-K, what primary factors drove the increase in Services net sales during 2024 compared to 2023?" },
-  { id: "DEV-009", label: "Negative Test (Q2 FY25)", q: "What were Apple's total net sales in the second quarter of fiscal year 2025?" },
-];
+import Sidebar from "../components/Sidebar";
+import MessageThread from "../components/MessageThread";
+import ChatInput from "../components/ChatInput";
+import InspectorDrawer from "../components/InspectorDrawer";
+import UploadModal from "../components/UploadModal";
 
 export default function Home() {
   const [question, setQuestion] = useState("");
-  const [period, setPeriod] = useState("FY2024");
+  const [period, setPeriod] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-  const [health, setHealth] = useState({ live: { status: "checking" }, ready: { status: "checking" } });
+  const [messages, setMessages] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  // Active Inspector Target
+  const [activeCitation, setActiveCitation] = useState(null);
+  const [activeDocument, setActiveDocument] = useState(null);
+
+  // Documents
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocIds, setSelectedDocIds] = useState(["AAPL-10K-2024"]);
+  const [health, setHealth] = useState({ active_engine: "sec_10k_index" });
 
   const abortControllerRef = useRef(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     fetchHealth();
+    fetchDocuments();
   }, []);
 
   const fetchHealth = async () => {
@@ -30,46 +39,114 @@ export default function Home() {
       const res = await fetch("/api/health");
       if (res.ok) {
         const data = await res.json();
-        setHealth({ live: data.backend_live, ready: data.database_ready });
+        setHealth(data);
       }
-    } catch {
-      setHealth({ live: { status: "offline" }, ready: { status: "offline" } });
+    } catch (e) {
+      // quiet fallback
     }
   };
 
-  const handleQuery = async (e) => {
-    if (e) e.preventDefault();
-    if (!question.trim() || loading) return;
+  const fetchDocuments = async () => {
+    try {
+      const res = await fetch("/api/documents");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.documents) {
+          setDocuments(data.documents);
+          if (data.documents.length > 0) {
+            setSelectedDocIds([data.documents[0].document_id]);
+          }
+        }
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  };
+
+  const handleDocumentUploaded = (newDoc) => {
+    setDocuments((prev) => [newDoc, ...prev]);
+    setSelectedDocIds((prev) => [newDoc.document_id, ...prev]);
+  };
+
+  const handleToggleDocSelection = (docId) => {
+    setSelectedDocIds((prev) =>
+      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
+    );
+  };
+
+  const handleExecuteQuery = async (queryText, queryPeriod) => {
+    const q = (queryText || question).trim();
+    if (!q) return;
 
     setLoading(true);
-    setError(null);
-    setResult(null);
+    setQuestion("");
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+    abortControllerRef.current = new AbortController();
 
     try {
       const res = await fetch("/api/query", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        },
         body: JSON.stringify({
-          question: question.trim(),
+          question: q,
           company: "Apple Inc.",
-          reporting_periods: period ? [period] : undefined,
+          reporting_periods: queryPeriod || period ? [queryPeriod || period] : undefined,
         }),
-        signal: controller.signal,
+        signal: abortControllerRef.current.signal,
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to process query");
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Server responded with HTTP ${res.status}`);
       }
-      setResult(data);
+
+      const data = await res.json();
+
+      const newTurn = {
+        question: q,
+        period: queryPeriod || period,
+        ...data,
+      };
+
+      setMessages((prev) => [...prev, newTurn]);
+
+      // Add to session history
+      setHistory((prev) => [
+        {
+          question: q,
+          period: queryPeriod || period,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          result: data,
+        },
+        ...prev.filter((h) => h.question !== q).slice(0, 9),
+      ]);
+
+      // If response includes citations, set active in inspector
+      if (data.citations && data.citations.length > 0) {
+        setActiveCitation(data.citations[0]);
+      }
+
+      // Scroll to bottom
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 100);
     } catch (err) {
       if (err.name === "AbortError") {
-        setError("Query was cancelled by user.");
+        // Cancelled
       } else {
-        setError(err.message || "An unexpected error occurred");
+        setMessages((prev) => [
+          ...prev,
+          {
+            question: q,
+            status: "error",
+            answer_text: `Error retrieving document answer: ${err.message}`,
+          },
+        ]);
       }
     } finally {
       setLoading(false);
@@ -77,179 +154,194 @@ export default function Home() {
     }
   };
 
-  const handleCancel = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+  const handleInspectCitation = (cite) => {
+    setActiveCitation(cite);
+    setActiveDocument(null);
+    setInspectorOpen(true);
+  };
+
+  const handleSelectHistory = (hItem) => {
+    if (hItem.result) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          question: hItem.question,
+          period: hItem.period,
+          ...hItem.result,
+        },
+      ]);
+    } else {
+      handleExecuteQuery(hItem.question, hItem.period);
     }
   };
 
-  const isFastApiLive = health?.live?.status === "ok";
-  const isDbConnected = health?.ready?.database === "connected";
+  const handleNewSession = () => {
+    setMessages([]);
+    setQuestion("");
+    setActiveCitation(null);
+  };
+
+  const handleExportMemo = (item) => {
+    const md = `# SEC 10-K Document Analysis Memo
+**Query:** ${item.question}
+**Period:** ${item.reporting_periods?.join(", ") || "FY2024"}
+**Status:** ${item.status}
+**Generated:** ${new Date().toUTCString()}
+
+---
+
+## Response
+${item.answer_text}
+
+${
+  item.calculations && item.calculations.length > 0
+    ? `## Calculations
+${item.calculations
+  .map(
+    (c) =>
+      `### Formula: ${c.formula}
+${c.operands.map((op) => `- ${op.name}: ${op.raw_value} (Page ${op.printed_page})`).join("\n")}
+**Result:** = ${c.display_value} ${c.unit}`
+  )
+  .join("\n\n")}`
+    : ""
+}
+
+${
+  item.citations && item.citations.length > 0
+    ? `## Citations
+${item.citations
+  .map(
+    (c, i) =>
+      `[${i + 1}] ${c.company} • Page ${c.printed_page} (${c.section})
+Quote: "${c.exact_quote}"`
+  )
+  .join("\n\n")}`
+    : ""
+}
+`;
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `DocIntel_Memo_${Date.now()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const activeDocCount = selectedDocIds.length;
+  const activeDocSummary =
+    activeDocCount === 1
+      ? documents.find((d) => d.document_id === selectedDocIds[0])?.report_fiscal_year
+        ? `Apple FY${documents.find((d) => d.document_id === selectedDocIds[0])?.report_fiscal_year} Form 10-K (with FY23 & FY22 comparatives)`
+        : "Apple FY2024 Form 10-K"
+      : `${activeDocCount} Documents Active`;
 
   return (
-    <main>
-      {/* Header */}
-      <header className="header">
-        <div>
-          <h1 className="title">Financial Document Intelligence</h1>
-          <p className="subtitle">
-            Analysis engine for Apple Inc. Forms 10-K (FY2022–FY2024)
-          </p>
-        </div>
+    <div className="webapp-root">
+      {/* Left Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        documents={documents}
+        selectedDocIds={selectedDocIds}
+        onToggleDocSelection={handleToggleDocSelection}
+        onOpenUpload={() => setUploadModalOpen(true)}
+        history={history}
+        onSelectHistory={handleSelectHistory}
+        onNewSession={handleNewSession}
+        activeEngine={health.active_engine}
+      />
 
-        {/* Live Status Indicators */}
-        <div className="status-pill">
-          <div>
-            <span className={`status-indicator ${isFastApiLive ? "status-online" : "status-offline"}`} />
-            <span>FastAPI: <strong>{isFastApiLive ? "Live" : "Offline"}</strong></span>
-          </div>
-          <div>
-            <span className={`status-indicator ${isDbConnected ? "status-online" : "status-offline"}`} />
-            <span>Supabase: <strong>{isDbConnected ? "Connected" : "Disconnected"}</strong></span>
-          </div>
-        </div>
-      </header>
-
-      {/* Preset Development Benchmark Queries */}
-      <section className="presets-section">
-        <div className="section-label">Sample Benchmark Queries</div>
-        <div className="presets-grid">
-          {SAMPLE_QUESTIONS.map((sample) => (
+      {/* Main Chat & Query Stage */}
+      <main className="webapp-main">
+        {/* Top App Bar */}
+        <header className="main-top-bar">
+          <div className="top-bar-left">
             <button
-              key={sample.id}
-              onClick={() => setQuestion(sample.q)}
-              className="preset-btn"
+              type="button"
+              className="btn-sidebar-toggle"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title="Toggle sidebar"
             >
-              <span className="preset-tag">[{sample.id}]</span> {sample.label}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
             </button>
-          ))}
-        </div>
-      </section>
 
-      {/* Query Form */}
-      <section className="card">
-        <form onSubmit={handleQuery}>
-          <textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask a financial question (e.g. What were Apple's total net sales in fiscal year 2024?)..."
-            className="query-textarea"
-          />
+            <div className="scope-badge">
+              <span>Source Scope:</span>
+              <strong>{activeDocSummary}</strong>
+            </div>
+          </div>
 
-          <div className="form-actions">
-            <div>
-              <span style={{ fontSize: "13px", marginRight: "8px", color: "#64748b" }}>Filter:</span>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="period-select"
+          <div className="top-bar-right">
+            {messages.length > 0 && (
+              <button
+                type="button"
+                className="btn-top-action"
+                onClick={handleNewSession}
+                title="Clear current analysis thread"
               >
-                <option value="FY2024">FY2024</option>
-                <option value="FY2023">FY2023</option>
-                <option value="FY2022">FY2022</option>
-                <option value="">All Periods</option>
-              </select>
-            </div>
+                Clear Thread
+              </button>
+            )}
 
-            <div>
-              {loading ? (
-                <button type="button" onClick={handleCancel} className="btn-cancel">
-                  ■ Cancel Query
-                </button>
-              ) : (
-                <button type="submit" disabled={!question.trim()} className="btn-primary">
-                  Submit Question
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              className={`btn-top-action ${inspectorOpen ? "active" : ""}`}
+              onClick={() => setInspectorOpen(!inspectorOpen)}
+              title="Toggle Chunk Inspector drawer"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="15" y1="3" x2="15" y2="21" />
+              </svg>
+              <span>Chunk Inspector</span>
+            </button>
           </div>
-        </form>
-      </section>
+        </header>
 
-      {/* Loading Indicator */}
-      {loading && (
-        <div className="card" style={{ textAlign: "center", color: "#64748b", padding: "30px" }}>
-          Retrieving documents, validating facts, and generating cited answer...
+        {/* Conversation Stream */}
+        <div ref={scrollRef} className="conversation-scroll">
+          <MessageThread
+            messages={messages}
+            loading={loading}
+            onSelectPrompt={(pQ, pP) => handleExecuteQuery(pQ, pP)}
+            onInspectCitation={handleInspectCitation}
+            onExportMemo={handleExportMemo}
+          />
         </div>
-      )}
 
-      {/* Error Message */}
-      {error && (
-        <div className="error-banner">
-          <strong>Notice:</strong> {error}
-        </div>
-      )}
+        {/* Floating Chat Input Dock */}
+        <ChatInput
+          question={question}
+          setQuestion={setQuestion}
+          period={period}
+          setPeriod={setPeriod}
+          loading={loading}
+          onSubmit={() => handleExecuteQuery(question, period)}
+          onOpenUpload={() => setUploadModalOpen(true)}
+        />
+      </main>
 
-      {/* Answer Output */}
-      {result && (
-        <div>
-          {/* Main Answer Text */}
-          <div className="card">
-            <div className="meta-row">
-              <span className={`badge ${result.status === "answered" ? "badge-answered" : "badge-warning"}`}>
-                {result.status}
-              </span>
-              <span style={{ fontSize: "12px", color: "#94a3b8" }}>
-                Request: {result.request_id}
-              </span>
-            </div>
+      {/* Right Inspector Drawer */}
+      <InspectorDrawer
+        isOpen={inspectorOpen}
+        onClose={() => setInspectorOpen(false)}
+        activeCitation={activeCitation}
+        activeDocument={activeDocument}
+      />
 
-            <div className="answer-body">
-              {result.answer_text}
-            </div>
-          </div>
-
-          {/* Auditable Calculation Ledger */}
-          {result.calculations && result.calculations.length > 0 && (
-            <div className="card" style={{ borderColor: "#bfdbfe", background: "#f0f9ff" }}>
-              <strong style={{ fontSize: "14px", color: "#1e3a8a" }}>Auditable Calculation Ledger</strong>
-              {result.calculations.map((calc, idx) => (
-                <div key={idx} className="ledger-item">
-                  <div style={{ fontFamily: "monospace", color: "#1d4ed8", marginBottom: "6px" }}>
-                    Formula: {calc.formula}
-                  </div>
-                  <div>
-                    <strong>Operands:</strong>
-                    <ul style={{ paddingLeft: "20px", marginTop: "4px" }}>
-                      {calc.operands?.map((op, oIdx) => (
-                        <li key={oIdx}>
-                          {op.name}: <strong>{op.raw_value}</strong> (Statement: {op.source_statement}, p. {op.printed_page})
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #e2e8f0" }}>
-                    <strong>Calculated Output:</strong> {calc.display_value} {calc.unit}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Sourced Citations */}
-          {result.citations && result.citations.length > 0 && (
-            <div className="card">
-              <strong style={{ fontSize: "14px", color: "#334155" }}>Verified Citations</strong>
-              <div className="citation-grid">
-                {result.citations.map((cite, idx) => (
-                  <div key={idx} className="citation-card">
-                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "600" }}>
-                      <span>{cite.company} ({cite.report_year} {cite.report_type})</span>
-                      <span style={{ color: "#2563eb" }}>p. {cite.printed_page}</span>
-                    </div>
-                    <div style={{ color: "#64748b", marginTop: "4px" }}>{cite.section}</div>
-                    {cite.exact_quote && (
-                      <div style={{ fontStyle: "italic", background: "#ffffff", padding: "6px", marginTop: "6px", border: "1px solid #f1f5f9" }}>
-                        &quot;{cite.exact_quote}&quot;
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </main>
+      {/* Upload Document Modal */}
+      <UploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onDocumentUploaded={handleDocumentUploaded}
+      />
+    </div>
   );
 }
