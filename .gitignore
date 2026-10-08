@@ -1,11 +1,39 @@
+# ====================================================================
+# Environment & Secrets (NEVER COMMIT)
+# ====================================================================
 .env
+.env*.local
+*.env
 
-
+# ====================================================================
+# Python Virtual Environments & Cache
+# ====================================================================
 venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# ====================================================================
+# Node / Next.js Dependencies & Build Output
+# ====================================================================
 node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+frontend/out/
+.npm
 
-
-originals/
+# ====================================================================
+# Heavy Binary Files & Generated Cache
+# ====================================================================
+# Raw PDFs are tracked via URLs & SHA-256 in data/source_manifest.jsonl
+data/originals/
+*.pdf
+data/parsed/
 docs/
 
 pyproject.toml
@@ -18,3 +46,12 @@ uv.lock
 
 .next/
 __pycache__/
+
+# ====================================================================
+# OS & Editor Junk
+# ====================================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+uv.lock
