@@ -35,12 +35,14 @@ data/originals/
 *.pdf
 data/parsed/
 docs/
+src/
+pyproject.toml
+.python-version
 
-# ====================================================================
-# OS & Editor Junk
-# ====================================================================
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+
+package-lock.json
+package.json
 uv.lock
+
+.next/
+__pycache__/
