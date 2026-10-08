@@ -7,7 +7,7 @@ node_modules/
 
 originals/
 docs/
-src/
+
 pyproject.toml
 .python-version
 
@@ -15,3 +15,6 @@ pyproject.toml
 package-lock.json
 package.json
 uv.lock
+
+.next/
+__pycache__/
