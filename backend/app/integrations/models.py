@@ -1,12 +1,15 @@
+import os
 from typing import List
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 load_dotenv()
 
 
-class EmbeddingService:
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2", device: str = "cpu"):
+class ModelService:
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2", chat_model: str = "gpt-6-luna", device: str = "cpu"):
         self.model_name = model_name
+        self.chat_model = chat_model
         self.device = device
         print(f"\n Loading embedding models {self.model_name} on {self.device}...")
         self.embed = HuggingFaceEmbeddings(
@@ -31,10 +34,23 @@ class EmbeddingService:
     def dimension(self) -> int:
         return 384
     
+    
+    def get_chat_llm(self, temperature: float = 0.0) -> ChatOpenAI:
+        api_key=os.environ["EXPLABS_API_KEY"]
+        if not api_key:
+            raise ValueError("EXPLABS_API_KEY environment variable not set..")
+        return ChatOpenAI(
+            model=self.chat_model,
+            base_url="https://api.experientiallabs.ai/v1",
+            api_key=api_key,
+            temperature=temperature
+        )
+
+
 
 def main():
     ## text embedding generation
-    service = EmbeddingService(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    service = ModelService(model_name="sentence-transformers/all-MiniLM-L6-v2", chat_model="gpt-6-luna")
     sample_chunks = [
         "Apple Inc. reported total net sales of $391,035 million for fiscal year 2024.",
         "Operating income was $123,216 million compared to $114,301 million in 2023.",
@@ -47,6 +63,10 @@ def main():
     query_vector = service.embed_query("What were total net sales in 2024?")
     print(f"\nGenerated query vector of dimension {len(query_vector)}.")
 
+    ##Test llm model
+    llm = service.get_chat_llm(temperature=0.0)
+    response = llm.invoke("Respond with: 'LLM is ready.'")
+    print(f"LLM Response: {response.content}")
 
 if __name__ == "__main__":
     main()
