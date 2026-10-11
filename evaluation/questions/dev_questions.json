@@ -90,5 +90,96 @@
     "target_filing": "N/A",
     "target_period": "N/A",
     "expected_category": "Negative Control"
+  },
+  {
+    "question_id": "DEV-011",
+    "question": "What was Microsoft's total revenue for fiscal year 2024?",
+    "task_type": "factual_lookup",
+    "company": "Microsoft Corporation",
+    "target_filing": "MSFT FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Income Statement"
+  },
+  {
+    "question_id": "DEV-012",
+    "question": "What was Microsoft's operating margin for fiscal year 2024?",
+    "task_type": "financial_calculation",
+    "company": "Microsoft Corporation",
+    "target_filing": "MSFT FY24 10-K",
+    "target_period": "FY2024",
+    "calculation_type": "operating_margin",
+    "expected_category": "Financial Ratio"
+  },
+  {
+    "question_id": "DEV-013",
+    "question": "What was Amazon's AWS segment net sales in fiscal year 2024?",
+    "task_type": "table_breakdown",
+    "company": "Amazon.com, Inc.",
+    "target_filing": "AMZN FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Segment Revenue"
+  },
+  {
+    "question_id": "DEV-014",
+    "question": "Compare Apple and Microsoft's operating margins for fiscal year 2024.",
+    "task_type": "multi_company_comparison",
+    "company": "Cross-Company",
+    "target_filing": "AAPL FY24 10-K & MSFT FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Comparative Analysis"
+  },
+  {
+    "question_id": "DEV-015",
+    "question": "Meta's 2024 fiscal year revenue?",
+    "task_type": "user_shorthand_lookup",
+    "company": "Meta Platforms, Inc.",
+    "target_filing": "META FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Income Statement"
+  },
+  {
+    "question_id": "DEV-016",
+    "question": "What was Amazon's revenue growth in 2023?",
+    "task_type": "user_shorthand_calculation",
+    "company": "Amazon.com, Inc.",
+    "target_filing": "AMZN FY24 10-K",
+    "target_period": "FY2023",
+    "expected_category": "Growth Analysis"
+  },
+  {
+    "question_id": "DEV-017",
+    "question": "Apple 2024 net sales",
+    "task_type": "user_shorthand_lookup",
+    "company": "Apple Inc.",
+    "target_filing": "AAPL FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Income Statement"
+  },
+  {
+    "question_id": "DEV-018",
+    "question": "Microsoft FY24 operating margin?",
+    "task_type": "user_shorthand_calculation",
+    "company": "Microsoft Corporation",
+    "target_filing": "MSFT FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Financial Ratio"
+  },
+  {
+    "question_id": "DEV-019",
+    "question": "Meta Reality Labs loss 2024",
+    "task_type": "user_shorthand_segment",
+    "company": "Meta Platforms, Inc.",
+    "target_filing": "META FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Segment Operating Loss"
+  },
+  {
+    "question_id": "DEV-020",
+    "question": "Amazon AWS sales 2024",
+    "task_type": "user_shorthand_segment",
+    "company": "Amazon.com, Inc.",
+    "target_filing": "AMZN FY24 10-K",
+    "target_period": "FY2024",
+    "expected_category": "Segment Revenue"
   }
 ]

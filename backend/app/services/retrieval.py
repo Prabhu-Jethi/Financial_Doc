@@ -12,12 +12,13 @@ class FinancialRetriever(BaseRetriever):
     ## Enforces ready-corpus isolation, similarity ranking, and table metadata recovery.
     top_k: int = 5
     document_id: Optional[str] = None
+    company: Optional[str] = None
     min_similarity: float = 0.0
     embedding_service: ModelService = None
     db_url: str = settings.database_url
 
     class Config:
-        arbitary_types_allowed = True
+        arbitrary_types_allowed = True
     
     def __init__(self, **data):
         super().__init__(**data)
@@ -38,6 +39,10 @@ class FinancialRetriever(BaseRetriever):
         if self.document_id:
             where_clauses.append("document_id = %s")
             params.append(self.document_id)
+
+        if self.company and self.company != "All":
+            where_clauses.append("document_id IN (SELECT document_id FROM documents WHERE company ILIKE %s)")
+            params.append(f"%{self.company}%")
 
         sql_query = f"""
         SELECT

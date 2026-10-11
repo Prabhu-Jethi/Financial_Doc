@@ -47,6 +47,9 @@ class ModelService:
         )
 
 
+EmbeddingService = ModelService
+
+
 
 def main():
     ## text embedding generation

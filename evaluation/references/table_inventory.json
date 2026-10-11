@@ -186,5 +186,98 @@
       "Total net sales"
     ],
     "parsing_notes": "Geographic segmentation of revenue across international operating segments. Sums to Total net sales."
+  },
+  {
+    "table_id": "TBL-MSFT-2024-IS-01",
+    "table_name": "Income Statements",
+    "filing": "MSFT FY2024 10-K (MSFT_FY24Q4_10K.pdf)",
+    "section": "Part II - Item 8. Financial Statements and Supplementary Data",
+    "printed_page": "64",
+    "currency": "USD",
+    "scale": "in millions, except per share amounts",
+    "columns": [
+      {"header": "June 30, 2024", "period_end": "2024-06-30"},
+      {"header": "June 30, 2023", "period_end": "2023-06-30"},
+      {"header": "June 30, 2022", "period_end": "2022-06-30"}
+    ],
+    "key_metrics": [
+      "Total revenue",
+      "Cost of revenue",
+      "Gross margin",
+      "Research and development",
+      "Sales and marketing",
+      "General and administrative",
+      "Operating income",
+      "Net income",
+      "Diluted earnings per share"
+    ],
+    "parsing_notes": "Microsoft statements reflect fiscal year end June 30."
+  },
+  {
+    "table_id": "TBL-AMZN-2024-IS-01",
+    "table_name": "Consolidated Statements of Operations",
+    "filing": "AMZN FY2024 10-K (Amazon-2024-Annual-Report.pdf)",
+    "section": "Part II - Item 8. Financial Statements and Supplementary Data",
+    "printed_page": "63",
+    "currency": "USD",
+    "scale": "in millions, except per share data",
+    "columns": [
+      {"header": "December 31, 2024", "period_end": "2024-12-31"},
+      {"header": "December 31, 2023", "period_end": "2023-12-31"},
+      {"header": "December 31, 2022", "period_end": "2022-12-31"}
+    ],
+    "key_metrics": [
+      "Total net sales",
+      "Total operating expenses",
+      "Operating income",
+      "Total non-operating income (expense)",
+      "Net income"
+    ],
+    "parsing_notes": "Amazon disaggregates sales into Products and Services."
+  },
+  {
+    "table_id": "TBL-AMZN-2024-SEG-01",
+    "table_name": "Segment Financial Information",
+    "filing": "AMZN FY2024 10-K (Amazon-2024-Annual-Report.pdf)",
+    "section": "Part II - Item 8. Note 10 - Segment Information",
+    "printed_page": "68",
+    "currency": "USD",
+    "scale": "in millions",
+    "columns": [
+      {"header": "2024", "period_end": "2024-12-31"},
+      {"header": "2023", "period_end": "2023-12-31"},
+      {"header": "2022", "period_end": "2022-12-31"}
+    ],
+    "key_metrics": [
+      "North America segment net sales",
+      "International segment net sales",
+      "AWS segment net sales",
+      "North America segment operating income",
+      "International segment operating income",
+      "AWS segment operating income"
+    ],
+    "parsing_notes": "Segment breakdown for AWS, North America, and International."
+  },
+  {
+    "table_id": "TBL-META-2024-IS-01",
+    "table_name": "Consolidated Statements of Income",
+    "filing": "META FY2024 10-K (Meta-12-31-2024-10K-ARS.pdf)",
+    "section": "Part II - Item 8. Financial Statements and Supplementary Data",
+    "printed_page": "88",
+    "currency": "USD",
+    "scale": "in millions, except per share amounts",
+    "columns": [
+      {"header": "December 31, 2024", "period_end": "2024-12-31"},
+      {"header": "December 31, 2023", "period_end": "2023-12-31"},
+      {"header": "December 31, 2022", "period_end": "2022-12-31"}
+    ],
+    "key_metrics": [
+      "Revenue",
+      "Costs and expenses",
+      "Income from operations",
+      "Income before provision for income taxes",
+      "Net income"
+    ],
+    "parsing_notes": "Meta uses 'Income from operations' for operating income."
   }
 ]

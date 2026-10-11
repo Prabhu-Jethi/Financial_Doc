@@ -249,5 +249,243 @@
     },
     "acceptance_criteria": "Must decline to provide stock trading advice and state that the assistant only provides factual document retrieval and mathematical calculations from historical reports.",
     "notes": "Protects against policy violations and out-of-scope queries."
+<<<<<<< HEAD
+=======
+  },
+  {
+    "question_id": "DEV-011",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_revenue",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "245,122",
+      "normalized_decimal": "245122000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total revenue ... $ 245,122",
+    "acceptance_criteria": "Must return exactly $245,122 million with a citation to the Microsoft FY24 Income Statements.",
+    "notes": "Microsoft fiscal year ends June 30."
+  },
+  {
+    "question_id": "DEV-012",
+    "task_type": "financial_calculation",
+    "canonical_metric": "operating_margin",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(operating_income / total_revenue) * 100",
+      "operands": [
+        {
+          "name": "operating_income",
+          "raw_value": "109,433",
+          "normalized_decimal": "109433000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        },
+        {
+          "name": "total_revenue",
+          "raw_value": "245,122",
+          "normalized_decimal": "245122000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        }
+      ],
+      "raw_computed_value": "44.64430773247607313909",
+      "display_value": "44.64%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must show formula, exact operands ($109,433M and $245,122M), and rounded result of 44.64%.",
+    "notes": "Deterministic calculation with provenance."
+  },
+  {
+    "question_id": "DEV-013",
+    "task_type": "table_breakdown",
+    "canonical_metric": "aws_segment_net_sales",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Note 10 Segment Information",
+    "printed_page": "68",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "105,255",
+      "normalized_decimal": "105255000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "AWS ... $ 105,255",
+    "acceptance_criteria": "Must return exactly $105,255 million for AWS net sales in FY2024.",
+    "notes": "Amazon disaggregates North America, International, and AWS."
+  },
+  {
+    "question_id": "DEV-014",
+    "task_type": "multi_company_comparison",
+    "canonical_metric": "operating_margin_cross_comparison",
+    "company": "Cross-Company",
+    "reporting_period": "FY2024",
+    "target_document_id": "AAPL-10K-2024 & MSFT-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf & MSFT_FY24Q4_10K.pdf",
+    "target_section": "Consolidated Statements of Operations & Income Statements",
+    "printed_page": "29 & 64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "aapl_operating_margin": "31.51%",
+      "msft_operating_margin": "44.64%",
+      "margin_differential_percentage_points": "+13.13 pp"
+    },
+    "acceptance_criteria": "Must calculate Apple FY24 operating margin as 31.51% and Microsoft FY24 operating margin as 44.64%, noting Microsoft was ~13.13 percentage points higher.",
+    "notes": "Cross-company comparison requires sourcing operands across distinct corporate 10-K filings."
+  },
+  {
+    "question_id": "DEV-015",
+    "task_type": "user_shorthand_lookup",
+    "canonical_metric": "revenue",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Income",
+    "printed_page": "88",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "164,815",
+      "normalized_decimal": "164815000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Revenue ... $ 164,815",
+    "acceptance_criteria": "Must answer shorthand question directly with $164,815 million in the first sentence.",
+    "notes": "Tests colloquial shorthand query handling."
+  },
+  {
+    "question_id": "DEV-016",
+    "task_type": "user_shorthand_calculation",
+    "canonical_metric": "revenue_growth",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "FY2023 vs FY2022",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Operations",
+    "printed_page": "63",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "((fy2023_sales - fy2022_sales) / fy2022_sales) * 100",
+      "operands": [
+        {
+          "name": "fy2023_net_sales",
+          "raw_value": "574,785",
+          "normalized_decimal": "574785000000"
+        },
+        {
+          "name": "fy2022_net_sales",
+          "raw_value": "513,983",
+          "normalized_decimal": "513983000000"
+        }
+      ],
+      "raw_computed_value": "11.830041071417537156",
+      "display_value": "+11.83%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must identify FY23 sales ($574,785M) and FY22 sales ($513,983M), computing growth of +$60,802M (+11.83%).",
+    "notes": "Comparative figures sourced from comparative column within single filing."
+  },
+  {
+    "question_id": "DEV-017",
+    "task_type": "user_shorthand_lookup",
+    "canonical_metric": "total_net_sales",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "391,035",
+      "normalized_decimal": "391035000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "acceptance_criteria": "Must map shorthand 'Apple 2024 net sales' directly to $391,035 million with Page 29 citation.",
+    "notes": "Direct user shorthand mapping."
+  },
+  {
+    "question_id": "DEV-018",
+    "task_type": "user_shorthand_calculation",
+    "canonical_metric": "operating_margin",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(operating_income / total_revenue) * 100",
+      "display_value": "44.64%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must extract operands ($109,433M and $245,122M) and return 44.64% for shorthand 'Microsoft FY24 operating margin?'.",
+    "notes": "User shorthand calculation test."
+  },
+  {
+    "question_id": "DEV-019",
+    "task_type": "user_shorthand_segment",
+    "canonical_metric": "reality_labs_operating_loss",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Segment Reporting Note",
+    "printed_page": "96",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "(17,730)",
+      "normalized_decimal": "-17730000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "acceptance_criteria": "Must state Reality Labs operating loss of $17,730 million (or -$17,730M) for 2024.",
+    "notes": "Handles parenthetical segment operating losses."
+  },
+  {
+    "question_id": "DEV-020",
+    "task_type": "user_shorthand_segment",
+    "canonical_metric": "aws_segment_net_sales",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Note 10 Segment Information",
+    "printed_page": "68",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "105,255",
+      "normalized_decimal": "105255000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "acceptance_criteria": "Must return $105,255 million for shorthand 'Amazon AWS sales 2024'.",
+    "notes": "Shorthand segment revenue lookup."
+>>>>>>> updates
   }
 ]
