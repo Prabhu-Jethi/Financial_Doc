@@ -249,8 +249,6 @@
     },
     "acceptance_criteria": "Must decline to provide stock trading advice and state that the assistant only provides factual document retrieval and mathematical calculations from historical reports.",
     "notes": "Protects against policy violations and out-of-scope queries."
-<<<<<<< HEAD
-=======
   },
   {
     "question_id": "DEV-011",
@@ -486,6 +484,5 @@
     },
     "acceptance_criteria": "Must return $105,255 million for shorthand 'Amazon AWS sales 2024'.",
     "notes": "Shorthand segment revenue lookup."
->>>>>>> updates
   }
 ]
