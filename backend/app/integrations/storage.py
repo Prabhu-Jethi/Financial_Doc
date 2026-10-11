@@ -17,6 +17,8 @@ class SupabaseStorageService:
 
         if not supabase_url or not supabase_key:
             raise ValueError("SUPABASE_URL and SUPABASE_SECRET_KEY must be configured in settings.")
+        self.supabase_url = supabase_url
+        self.supabase_key = supabase_key
         self.bucket_name = bucket_name
         self.client: Client = create_client(supabase_url, supabase_key)
 
@@ -96,7 +98,7 @@ class SupabaseStorageService:
 
 def main():
     """Manual verification script."""
-    print("Testing Supabase Storage Connection...")
+    print("\nTesting Supabase Storage Connection...\n")
     if not settings.supabase_url or not settings.supabase_secret_key:
         print("!! Error: SUPABASE_URL or SUPABASE_SECRET_KEY missing in .env")
         return
@@ -106,24 +108,34 @@ def main():
 
     ## Locate local file on disk
     project_root = Path(__file__).resolve().parents[3]
-    # filename = "10-Q4-2024-As-Filed.pdf"
-    # filename = "_10-K-Q4-2023-As-Filed.pdf"
-    filename = "_10-K-2022-(As-Filed).pdf" 
-    
-    local_pdf = project_root / "data" / "originals" / filename
+    originals_dir = project_root / "data" / "originals"
 
-    if not local_pdf.exists():
-        print(f"Local file not found at: {local_pdf}")
+    if not originals_dir.exists():
+        print(f"Local directory not found: {originals_dir}")
         return
     
-    print(f"Uploading '{filename}' to bucket '{storage.bucket_name}'...")
-    storage.upload_document(local_file_path=local_pdf, remote_filename=filename)
+    # 2. Discover all PDF files
+    pdf_files = sorted(list(originals_dir.glob("*.pdf")))
+    print(f"\nDiscovered {len(pdf_files)} PDF files to upload in '{originals_dir}'.\n")
 
-    try:
-        url = storage.get_signed_url(remote_filename=filename, expires_in_seconds=300)
-        print(f"\nGenerated signed URL (valid 5 min):\n{url}\n")
-    except Exception as e:
-        print(f"Could not create signed URL: {e}")
+    # 3. Upload all files in a single pass
+    success_count = 0
+    for idx, pdf_path in enumerate(pdf_files, 1):
+        filename = pdf_path.name
+        file_size_mb = pdf_path.stat().st_size / (1024 * 1024)
+        print(f"[{idx}/{len(pdf_files)}] Uploading '{filename}' ({file_size_mb:.2f} MB)...")
+
+        try:
+            storage.upload_document(local_file_path=pdf_path, remote_filename=filename)
+            signed_url = storage.get_signed_url(remote_filename=filename, expires_in_seconds=300)
+            print(f"       -> Uploaded! Signed URL {signed_url} verified.\n")
+            success_count += 1
+
+        except Exception as e:
+            print(f"       ! Error uploading {filename}: {e}\n")
+
+    print(f"Batch upload complete! Successfully processed {success_count}/{len(pdf_files)} documents.")
+    
 
 
 
