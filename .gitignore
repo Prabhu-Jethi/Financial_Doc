@@ -16,3 +16,5 @@ pyproject.toml
 package-lock.json
 package.json
 uv.lock
+
+.next/
