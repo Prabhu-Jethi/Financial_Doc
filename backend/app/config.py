@@ -4,10 +4,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from pydantic import field_validator
+
 class Settings(BaseSettings):
     app_name: str = "Financial Document Intelligence API"
     app_version: str = "0.1.0"
     debug: bool = False
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug(cls, v):
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "debug", "development")
+        return bool(v)
 
     database_url: str = ""
     supabase_url: str = ""
