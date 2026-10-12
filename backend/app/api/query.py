@@ -33,7 +33,8 @@ def execute_query(req: QueryRequest, x_request_id: str = Header(default=None)):
         reporting_periods=req.reporting_periods or [],
         answer_text=result["answer_text"],
         citations=result["citations"],
-        facts=[],
+        facts=result.get("facts", []),
         calculations=result.get("calculations", []),
+        missing_information=result.get("missing_information", []),
         timings_ms={"total": round(elapsed_ms, 2)}
     )
