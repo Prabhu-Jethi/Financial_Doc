@@ -10,7 +10,7 @@ from ..integrations.models import ModelService
 
 class FinancialRetriever(BaseRetriever):
     ## Enforces ready-corpus isolation, similarity ranking, and table metadata recovery.
-    top_k: int = 5
+    top_k: int = 8
     document_id: Optional[str] = None
     company: Optional[str] = None
     min_similarity: float = 0.0
@@ -40,9 +40,15 @@ class FinancialRetriever(BaseRetriever):
             where_clauses.append("document_id = %s")
             params.append(self.document_id)
 
-        if self.company and self.company != "All":
+        if self.company and self.company not in ["All", "Cross-Company"]:
             where_clauses.append("document_id IN (SELECT document_id FROM documents WHERE company ILIKE %s)")
             params.append(f"%{self.company}%")
+
+        q_lower = query.lower()
+        if "2024" in q_lower or "fy24" in q_lower or "fy2024" in q_lower:
+            where_clauses.append("(metadata->>'report_fiscal_year' = '2024' OR metadata->>'report_fiscal_year' IS NULL)")
+        elif "2023" in q_lower or "fy23" in q_lower:
+            where_clauses.append("(metadata->>'report_fiscal_year' IN ('2023', '2024'))")
 
         sql_query = f"""
         SELECT
