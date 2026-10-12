@@ -6,9 +6,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 
 from .retrieval import FinancialRetriever
+from .evidence import EvidenceService
 from ..integrations.models import ModelService
 from ..services.calculations import FinancialCalculator, OperandInput
-from ..schemas import AnswerStatus, Citation, CalculationLedgerItem, CalculationOperand
+from ..schemas import AnswerStatus, Citation, CalculationLedgerItem, CalculationOperand, VerifiedFact
 
 SYSTEM_PROMPT = """You are a senior financial analyst assistant specializing in SEC Form 10-K filings for public corporations (Apple, Amazon, Meta, Microsoft, etc.).
 Answer the user's question using ONLY the provided filing excerpts.
@@ -40,7 +41,7 @@ Extract the EXACT reported numerical values, line item names, source statement, 
 DO NOT calculate the math yourself. Only extract the operands as reported in the filing excerpts.
 
 Supported calculation types and expected operands:
-- "operating_margin": operand 0 = Operating Income / Income from operations, operand 1 = Total Net Sales / Revenue
+- "operating_margin": operand 0 = Operating Income / Income from operations, operand 1 = Total Net Sales / Revenue / Total revenue (Microsoft)
 - "gross_margin": operand 0 = Gross Profit, operand 1 = Total Net Sales / Revenue
 - "net_margin": operand 0 = Net Income, operand 1 = Total Net Sales / Revenue
 - "percentage_growth": operand 0 = Current Period Value, operand 1 = Prior Period Baseline Value
@@ -81,6 +82,7 @@ class AnswerService:
         self.retriever = retriever or FinancialRetriever()
         self.llm = llm or ModelService().get_chat_llm(temperature=0.0)
         self.calculator = FinancialCalculator()
+        self.evidence_service = EvidenceService()
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", SYSTEM_PROMPT),
             ("human", "{question}")
@@ -198,8 +200,23 @@ class AnswerService:
 
     def answer_query(self, question: str, company: Optional[str] = None, document_id: Optional[str] = None):
         ## Configure dynamic retrieval filters (reset per request to prevent cross-query leakage)
+        q_lower = question.lower()
+        if any (trigger in q_lower for trigger in ["buy or sell", "buy/sell", "should i buy", "should i sell", "invest in", "stock advice"]):
+            return {
+                "answer_text": "I can only provide factual historical financial data and calculations from filed SEC reports. Per policy, I cannot provide investment advice, stock recommendations, or buy/sell guidance.",
+                "citations": [],
+                "facts": [],
+                "status": AnswerStatus.OUT_OF_SCOPE,
+                "docs": [],
+                "calculations": [],
+                "missing_information": ["Query requested investment/trading advice which is out of scope per policy."]
+            }
+        
         self.retriever.document_id = document_id if document_id else None
-        self.retriever.company = company if (company and company != "All") else None
+        if company in ["All", "Cross-Company", None]:
+            self.retriever.company = None
+        else:
+            self.retriever.company = company
 
         ## 1. Retrieve evidence documents
         docs: List[Document] = self.retriever.invoke(question)
@@ -240,27 +257,24 @@ class AnswerService:
         chain = self.prompt | self.llm | StrOutputParser()
         answer_text = chain.invoke({"context": augmented_context, "question": question})
 
-        # 6. Extract citations from retrieved docs
-        citations = [
-            Citation(
-                citation_id=str(d.metadata.get("chunk_id", "")),
-                company=d.metadata.get("company", company or "Company"),
-                report_year=d.metadata.get("report_fiscal_year") or self._extract_fiscal_year(d.metadata.get("document_id")),
-                report_type=d.metadata.get("report_type", "10-K"),
-                printed_page=str(d.metadata.get("printed_page", "N/A")),
-                section=d.metadata.get("section", "Item 8"),
-                exact_quote=d.page_content[:200] + ("..." if len(d.page_content) > 200 else ""),
-                document_id=d.metadata.get("document_id")
-            )
-            for d in docs
-        ]
+        ## 6. Validate Evidence, Provenance Citations, and Numerical Grounding
+        validation = self.evidence_service.validate_and_enrich_result(
+            question=question,
+            answer_text=answer_text,
+            docs=docs,
+            calculations=calculations,
+            company=company
+        )
 
         return {
             "answer_text": answer_text,
-            "citations": citations,
-            "status": AnswerStatus.ANSWERED,
+            "citations": validation["citations"],
+            "facts": validation["facts"],
+            "calculations": calculations,
+            "status": validation["status"],
             "docs": docs,
-            "calculations": calculations
+            "missing_information": validation["missing_information"],
+            "audit_report": validation["audit"]
         }
 
 
