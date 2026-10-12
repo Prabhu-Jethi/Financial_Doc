@@ -23,7 +23,7 @@ export default function Home() {
 
   // Documents
   const [documents, setDocuments] = useState([]);
-  const [selectedDocIds, setSelectedDocIds] = useState(["AAPL-10K-2024"]);
+  const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [health, setHealth] = useState({ active_engine: "sec_10k_index" });
 
   const abortControllerRef = useRef(null);
@@ -54,7 +54,7 @@ export default function Home() {
         if (data.documents) {
           setDocuments(data.documents);
           if (data.documents.length > 0) {
-            setSelectedDocIds([data.documents[0].document_id]);
+            setSelectedDocIds(data.documents.map((d) => d.document_id));
           }
         }
       }
@@ -84,6 +84,27 @@ export default function Home() {
     abortControllerRef.current = new AbortController();
 
     try {
+      // 1. Resolve company context dynamically from question or selected document
+      let queryCompany = "All";
+      let queryDocId = undefined;
+
+      const qLower = q.toLowerCase();
+      if (qLower.includes("microsoft") || qLower.includes("msft")) {
+        queryCompany = "Microsoft Corporation";
+      } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
+        queryCompany = "Amazon.com, Inc.";
+      } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
+        queryCompany = "Meta Platforms, Inc.";
+      } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
+        queryCompany = "Apple Inc.";
+      } else if (selectedDocIds.length === 1) {
+        const selectedDoc = documents.find((d) => d.document_id === selectedDocIds[0]);
+        if (selectedDoc) {
+          queryCompany = selectedDoc.company || "All";
+          queryDocId = selectedDoc.document_id;
+        }
+      }
+
       const res = await fetch("/api/query", {
         method: "POST",
         headers: {
@@ -92,7 +113,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           question: q,
-          company: "Apple Inc.",
+          company: queryCompany,
+          document_id: queryDocId,
           reporting_periods: queryPeriod || period ? [queryPeriod || period] : undefined,
         }),
         signal: abortControllerRef.current.signal,
@@ -232,12 +254,12 @@ Quote: "${c.exact_quote}"`
   };
 
   const activeDocCount = selectedDocIds.length;
-  const activeDocSummary =
-    activeDocCount === 1
-      ? documents.find((d) => d.document_id === selectedDocIds[0])?.report_fiscal_year
-        ? `Apple FY${documents.find((d) => d.document_id === selectedDocIds[0])?.report_fiscal_year} Form 10-K (with FY23 & FY22 comparatives)`
-        : "Apple FY2024 Form 10-K"
-      : `${activeDocCount} Documents Active`;
+  const singleDoc = activeDocCount === 1 ? documents.find((d) => d.document_id === selectedDocIds[0]) : null;
+  const activeDocSummary = singleDoc
+    ? `${singleDoc.company || "Company"} FY${singleDoc.report_fiscal_year || ""} ${singleDoc.report_type || "10-K"}`
+    : activeDocCount > 1
+    ? `${activeDocCount} Filings Active (Multi-Company Corpus)`
+    : "All Corporate Filings Active";
 
   return (
     <div className="webapp-root">
@@ -325,6 +347,7 @@ Quote: "${c.exact_quote}"`
           loading={loading}
           onSubmit={() => handleExecuteQuery(question, period)}
           onOpenUpload={() => setUploadModalOpen(true)}
+          activeDocSummary={activeDocSummary}
         />
       </main>
 

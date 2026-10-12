@@ -4,40 +4,40 @@ import { useState } from "react";
 
 const STARTER_PROMPTS = [
   {
-    tag: "DEV-005",
-    label: "YoY Comparison",
-    query: "Compare Apple's Services net sales between fiscal year 2023 and fiscal year 2024.",
-    period: "Comparative: FY2024 vs FY2023",
-  },
-  {
-    tag: "DEV-001",
-    label: "Revenue Growth",
-    query: "What were Apple's total net sales in fiscal year 2024?",
+    tag: "DEV-015",
+    label: "Meta Revenue",
+    query: "Meta's 2024 fiscal year revenue?",
     period: "FY2024",
   },
   {
+    tag: "DEV-018",
+    label: "Microsoft Margin",
+    query: "Microsoft FY24 operating margin?",
+    period: "FY2024",
+  },
+  {
+    tag: "DEV-016",
+    label: "Amazon Growth",
+    query: "What was Amazon's revenue growth in 2023?",
+    period: "Comparative: FY2023 vs FY2022",
+  },
+  {
     tag: "DEV-006",
-    label: "Operating Margin",
+    label: "Apple Margin",
     query: "What was Apple's operating margin for fiscal year 2024?",
     period: "FY2024",
   },
   {
-    tag: "DEV-004",
-    label: "Segment Breakdown",
-    query: "What was the breakdown of Apple's net sales by product category in fiscal year 2024?",
+    tag: "DEV-014",
+    label: "Cross-Company",
+    query: "Compare Apple and Microsoft's operating margins for fiscal year 2024.",
+    period: "FY2024 Comparative",
+  },
+  {
+    tag: "DEV-020",
+    label: "AWS Segment",
+    query: "Amazon AWS sales 2024",
     period: "FY2024",
-  },
-  {
-    tag: "DEV-007",
-    label: "iPhone Growth",
-    query: "What was the year-over-year percentage growth in Apple's iPhone net sales from fiscal year 2023 to fiscal year 2024?",
-    period: "Comparative: FY2024 vs FY2023",
-  },
-  {
-    tag: "DEV-008",
-    label: "MD&A Narrative",
-    query: "According to management in Item 7 of the FY2024 10-K, what primary factors drove the increase in Services net sales during 2024 compared to 2023?",
-    period: "Comparative: FY2024 vs FY2023",
   },
 ];
 
@@ -86,7 +86,7 @@ export default function MessageThread({
             <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           <span>
-            <strong>Comparative Scope Notice:</strong> An annual filing (such as Apple FY2024 Form 10-K) contains figures for previous years (FY2023 and FY2022). Multi-year comparisons do not require two uploaded reports.
+            <strong>Comparative Scope Notice:</strong> An annual filing (such as Form 10-K for Apple, Amazon, Microsoft, or Meta) discloses comparative figures for prior years (e.g. FY23 & FY22). Multi-year comparisons do not require two separate filings.
           </span>
         </div>
 
@@ -161,7 +161,7 @@ export default function MessageThread({
                   </span>
 
                   <span className="source-scope-label">
-                    {item.company || "Apple Inc."} Form 10-K (FY2024 Disclosures)
+                    {item.company ? `${item.company} Form 10-K` : "SEC Form 10-K Disclosures"}
                   </span>
                 </div>
 
@@ -190,7 +190,7 @@ export default function MessageThread({
                     <div className="comparison-title-row">
                       <span className="comparison-table-title">{item.comparison_table.title}</span>
                       <span className="comparison-source-pill">
-                        Source Filing: {item.comparison_table.source_filing || "Apple Form 10-K (FY2024)"}
+                        Source Filing: {item.comparison_table.source_filing || (item.company ? `${item.company} Form 10-K` : "SEC Form 10-K")}
                       </span>
                     </div>
                     <p className="comparison-explicit-note">
@@ -294,8 +294,8 @@ export default function MessageThread({
                                         onClick={() =>
                                           onInspectCitation(
                                             matchingCite || {
-                                              company: item.company || "Apple Inc.",
-                                              report_year: 2024,
+                                              company: item.company || "SEC Filing",
+                                              report_year: item.reporting_periods?.[0] || 2024,
                                               report_type: "10-K",
                                               printed_page: op.printed_page,
                                               section: op.source_statement,

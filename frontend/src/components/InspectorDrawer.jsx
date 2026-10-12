@@ -9,9 +9,9 @@ export default function InspectorDrawer({
   if (!isOpen) return null;
 
   const title = activeCitation
-    ? `${activeCitation.company || "Apple Inc."} • ${activeCitation.report_year || 2024} ${activeCitation.report_type || "10-K"}`
+    ? `${activeCitation.company || "SEC Filing"} • ${activeCitation.report_year || ""} ${activeCitation.report_type || "10-K"}`
     : activeDocument
-    ? `${activeDocument.company || "Apple Inc."} • FY${activeDocument.report_fiscal_year || 2024}`
+    ? `${activeDocument.company || "SEC Filing"} • FY${activeDocument.report_fiscal_year || ""}`
     : "Document Chunk Inspector";
 
   const page = activeCitation?.printed_page || "29";

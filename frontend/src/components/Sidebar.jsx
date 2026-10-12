@@ -89,9 +89,23 @@ export default function Sidebar({
                     aria-label={`Select ${doc.company || "document"}`}
                   />
                   <div className="doc-card-info">
-                    <span className="doc-card-name" title={doc.file_name || doc.company}>
-                      {doc.isCustom ? doc.company : `Apple ${doc.report_fiscal_year} ${doc.report_type}`}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      {doc.ticker && (
+                        <span style={{
+                          fontSize: "0.65rem",
+                          fontWeight: "700",
+                          padding: "1px 5px",
+                          borderRadius: "3px",
+                          background: doc.ticker === "AAPL" ? "#e0e7ff" : doc.ticker === "AMZN" ? "#ffedd5" : doc.ticker === "MSFT" ? "#dbeafe" : "#fce7f3",
+                          color: doc.ticker === "AAPL" ? "#3730a3" : doc.ticker === "AMZN" ? "#9a3412" : doc.ticker === "MSFT" ? "#1e40af" : "#9d174d",
+                        }}>
+                          {doc.ticker}
+                        </span>
+                      )}
+                      <span className="doc-card-name" title={doc.file_name || doc.company}>
+                        {doc.company ? `${doc.company.replace(", Inc.", "").replace(" Corporation", "")} FY${doc.report_fiscal_year || ""}` : (doc.file_name || "Financial Report")}
+                      </span>
+                    </div>
                     <div className="doc-card-sub">
                       <span>
                         <span className="doc-status-dot" />
@@ -99,9 +113,9 @@ export default function Sidebar({
                       </span>
                       <span>{doc.report_fiscal_year ? `FY${doc.report_fiscal_year}` : "Ready"}</span>
                     </div>
-                    {is2024 && (
+                    {doc.report_type === "10-K" && (
                       <span className="doc-comparative-pill">
-                        Contains FY23 &amp; FY22 Comparatives
+                        Includes Prior Year Comparatives
                       </span>
                     )}
                   </div>

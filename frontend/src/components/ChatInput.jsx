@@ -10,6 +10,7 @@ export default function ChatInput({
   loading,
   onSubmit,
   onOpenUpload,
+  activeDocSummary,
 }) {
   const textareaRef = useRef(null);
 
@@ -37,8 +38,8 @@ export default function ChatInput({
           <div className="scope-indicator-tag">
             <span className="scope-dot" />
             <span className="scope-text-bold">Source Report:</span>
-            <span>Apple Form 10-K (FY2024)</span>
-            <span className="scope-subtext-pill">Contains FY24, FY23 &amp; FY22 Comparative Disclosures</span>
+            <span>{activeDocSummary || "Multi-Company Corpus (AAPL, AMZN, MSFT, META)"}</span>
+            <span className="scope-subtext-pill">Disclosed SEC 10-K Filings</span>
           </div>
 
           <div className="composer-period-picker">

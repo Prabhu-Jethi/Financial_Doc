@@ -23,7 +23,7 @@ export default function SidebarPanel({
             <div key={doc.document_id} className="document-item">
               <div className="document-item-top">
                 <span className="document-name">
-                  Apple {doc.report_fiscal_year} {doc.report_type}
+                  {doc.company ? `${doc.company.replace(", Inc.", "").replace(" Corporation", "")} FY${doc.report_fiscal_year}` : (doc.file_name || `Document FY${doc.report_fiscal_year}`)}
                 </span>
                 <span className="doc-status-badge">READY</span>
               </div>
