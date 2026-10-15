@@ -309,14 +309,22 @@ class EvidenceService:
                 except InvalidOperation:
                     pass
 
+            if is_found:
+                grounded_numbers.append(num_str)
+            else:
+                unverified_numbers.append(num_str)
+
         is_grounded = len(unverified_numbers) == 0
+
+        ratio = round(len(grounded_numbers) / max(len(financial_numbers), 1), 4)
 
         return {
             "is_grounded": is_grounded,
             "total_financial_tokens": len(financial_numbers),
             "grounded_numbers": grounded_numbers,
             "unverified_numbers": unverified_numbers,
-            "verification_ratio": round(len(grounded_numbers) / max(len(financial_numbers), 1), 4),
+            "verification_ratio": ratio,
+            "grounded_ratio": ratio,
             "status_recommendation": AnswerStatus.ANSWERED if is_grounded else AnswerStatus.PARTIAL
         }
 
