@@ -95,6 +95,22 @@ class TestAccessAndContracts:
         response = self.client.post("/api/v1/query", json={"question": "hi"})
         assert response.status_code == 422
 
+    def test_query_endpoint_rejects_out_of_scope_trading_advice(self):
+        """POST /api/v1/query must intercept investment/trading advice and return OUT_OF_SCOPE."""
+        advice_queries = [
+            "Should I buy or sell Apple stock?",
+            "Is Microsoft stock a good buy right now?",
+            "Give me stock advice on whether to invest in Amazon"
+        ]
+        for q in advice_queries:
+            response = self.client.post("/api/v1/query", json={"question": q})
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "out_of_scope"
+            assert "investment advice" in data["answer_text"].lower()
+            assert len(data["citations"]) == 0
+            assert len(data["calculations"]) == 0
+
 
 
 def main():
