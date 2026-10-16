@@ -1,6 +1,5 @@
 """
 Automated Evaluation Runner for SEC Financial Document Intelligence Engine.
-Compliant with TRD § 7, rules.md § 3, and phases.md (Phase 4 Evaluation Gate).
 
 Evaluates the live pipeline across 20 dev benchmark cases (DEV-001..DEV-020):
 1. Status adherence (answered, insufficient_evidence, out_of_scope)
@@ -18,7 +17,6 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from decimal import Decimal
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -26,14 +24,25 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.app.services.answering import AnswerService
-from backend.app.schemas import AnswerStatus
+from backend.app.services.retrieval import FinancialRetriever
 
 
 class FinancialBenchmarkEvaluator:
-    def __init__(self):
-        self.answer_service = AnswerService()
-        self.questions_file = PROJECT_ROOT / "evaluation" / "questions" / "dev_questions.json"
-        self.references_file = PROJECT_ROOT / "evaluation" / "references" / "dev_reference.json"
+    def __init__(self, suite: str = "dev", mode: str = "hybrid"):
+        self.suite = suite.lower()
+        self.mode = mode.lower()
+        retriever = FinancialRetriever(search_mode=self.mode)
+        self.answer_service = AnswerService(retriever=retriever)
+        
+        if self.suite == "release":
+            self.questions_file = PROJECT_ROOT / "evaluation" / "questions" / "release_questions.json"
+            self.references_file = PROJECT_ROOT / "evaluation" / "references" / "release_reference.json"
+            self.report_prefix = f"release_eval_report_{self.mode}"
+        else:
+            self.questions_file = PROJECT_ROOT / "evaluation" / "questions" / "dev_questions.json"
+            self.references_file = PROJECT_ROOT / "evaluation" / "references" / "dev_reference.json"
+            self.report_prefix = f"dev_eval_report_{self.mode}"
+
         self.results_dir = PROJECT_ROOT / "evaluation" / "results"
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -326,6 +335,8 @@ class FinancialBenchmarkEvaluator:
         report_data = {
             "timestamp": datetime.now().isoformat(),
             "summary": {
+                "suite": self.suite,
+                "search_mode": self.mode,
                 "total_cases": total,
                 "passed_cases": passed_count,
                 "accuracy_pct": accuracy_pct,
@@ -336,7 +347,7 @@ class FinancialBenchmarkEvaluator:
             "cases": results,
         }
 
-        report_filename = f"dev_eval_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        report_filename = f"{self.report_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         report_path = self.results_dir / report_filename
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(report_data, f, indent=2)
@@ -347,11 +358,13 @@ class FinancialBenchmarkEvaluator:
 
 def main():
     parser = argparse.ArgumentParser(description="Run SEC Document Intelligence Benchmark Evaluation")
+    parser.add_argument("--suite", type=str, default="dev", choices=["dev", "release"], help="Benchmark suite (dev or release)")
+    parser.add_argument("--mode", type=str, default="hybrid", choices=["hybrid", "dense", "lexical"], help="Retrieval search mode (hybrid, dense, lexical)")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of test cases")
-    parser.add_argument("--id", type=str, default=None, help="Run specific question ID (e.g. DEV-001)")
+    parser.add_argument("--id", type=str, default=None, help="Run specific question ID (e.g. DEV-001 or REL-001)")
     args = parser.parse_args()
 
-    evaluator = FinancialBenchmarkEvaluator()
+    evaluator = FinancialBenchmarkEvaluator(suite=args.suite, mode=args.mode)
     evaluator.run_all(limit=args.limit, specific_id=args.id)
 
 
