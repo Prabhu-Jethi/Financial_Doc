@@ -143,3 +143,4 @@ CREATE INDEX IF NOT EXISTS idx_facts_doc_metric ON facts(document_id, canonical_
 CREATE INDEX IF NOT EXISTS idx_facts_period ON facts(reporting_period);
 CREATE INDEX IF NOT EXISTS idx_chunks_doc ON chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_answers_req ON answers(request_id);
+CREATE INDEX IF NOT EXISTS idx_chunks_fits_content ON chunks USING gin(to_tsvector('english', content))
