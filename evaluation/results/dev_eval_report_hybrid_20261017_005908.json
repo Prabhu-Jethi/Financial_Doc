@@ -1,12 +1,14 @@
 {
-  "timestamp": "2026-10-12T20:38:30.278185",
+  "timestamp": "2026-10-17T00:59:08.037968",
   "summary": {
+    "suite": "dev",
+    "search_mode": "hybrid",
     "total_cases": 20,
-    "passed_cases": 20,
-    "accuracy_pct": 100.0,
+    "passed_cases": 17,
+    "accuracy_pct": 85.0,
     "calculation_precision_pct": 100.0,
-    "zero_hallucination_rate_pct": 100.0,
-    "average_latency_s": 5.95
+    "zero_hallucination_rate_pct": 90.0,
+    "average_latency_s": 6.38
   },
   "cases": [
     {
@@ -40,8 +42,8 @@
         "37",
         "18"
       ],
-      "latency_s": 4.56,
-      "answer_excerpt": "Apple\u2019s total net sales in fiscal year 2024 were **$391,035 million** (Item 8, Page 29, Consolidated Statements of Operations). The 2024 For..."
+      "latency_s": 4.2,
+      "answer_excerpt": "Apple\u2019s total net sales in fiscal year 2024 were **$391,035 million**. The 2024 Form 10-K also reports comparative total net sales for fisca..."
     },
     {
       "question_id": "DEV-002",
@@ -74,8 +76,8 @@
         "29",
         "24"
       ],
-      "latency_s": 3.69,
-      "answer_excerpt": "Apple\u2019s fiscal 2024 operating income was **$123,216 million**. (Item 8, **Consolidated Statements of Operations**, Page 29)\n\nThe 2024 Form 1..."
+      "latency_s": 4.51,
+      "answer_excerpt": "Apple\u2019s total operating income for fiscal year 2024 was **$123,216 million** (Item 8, Page 29, Consolidated Statements of Operations). The 2..."
     },
     {
       "question_id": "DEV-003",
@@ -99,8 +101,8 @@
       "matched_calc": null,
       "expected_page": "31",
       "cited_pages": [
-        "36",
         "42",
+        "36",
         "34",
         "37",
         "57",
@@ -108,8 +110,8 @@
         "48",
         "24"
       ],
-      "latency_s": 3.58,
-      "answer_excerpt": "Apple\u2019s cash and cash equivalents balance was **$29,943 million** as of September 28, 2024 (Item 8, Consolidated Balance Sheets, printed pag..."
+      "latency_s": 4.27,
+      "answer_excerpt": "Apple\u2019s cash and cash equivalents balance was **$29,943 million** as of September 28, 2024 (Consolidated Balance Sheets, Item 8, printed pag..."
     },
     {
       "question_id": "DEV-004",
@@ -150,8 +152,8 @@
         "18",
         "49"
       ],
-      "latency_s": 4.31,
-      "answer_excerpt": "Apple\u2019s fiscal 2024 net sales were **$391,035 million**, broken down by category as follows (dollars in millions): **iPhone $201,183; Mac $2..."
+      "latency_s": 5.14,
+      "answer_excerpt": "Apple\u2019s fiscal 2024 net sales were **$391,035 million**, broken down as follows (in millions): **iPhone $201,183; Mac $29,984; iPad $26,694;..."
     },
     {
       "question_id": "DEV-005",
@@ -186,8 +188,8 @@
         "37",
         "45"
       ],
-      "latency_s": 4.64,
-      "answer_excerpt": "Apple\u2019s Services net sales increased by **$10,969 million**, from **$85,200 million in fiscal 2023** to **$96,169 million in fiscal 2024**\u2014a..."
+      "latency_s": 5.44,
+      "answer_excerpt": "Apple\u2019s Services net sales increased by **$10,969 million, or 13%**, from **$85,200 million in fiscal 2023** to **$96,169 million in fiscal ..."
     },
     {
       "question_id": "DEV-006",
@@ -208,29 +210,35 @@
       "expected_page": "29",
       "cited_pages": [
         "29",
+        "18",
         "24",
         "32",
         "118",
         "38",
         "37",
-        "45",
-        "35"
+        "45"
       ],
-      "latency_s": 7.18,
-      "answer_excerpt": "Apple\u2019s operating margin for fiscal year 2024 was **31.51%**.\n\nCalculated as operating income of **$123,216 million** divided by total net s..."
+      "latency_s": 7.94,
+      "answer_excerpt": "Apple\u2019s operating margin for fiscal year 2024 was **31.51%**. It is calculated as operating income of **$123,216 million** divided by total ..."
     },
     {
       "question_id": "DEV-007",
       "task_type": "financial_calculation",
       "company": "Apple Inc.",
       "question": "What was the year-over-year percentage growth in Apple's iPhone net sales from fiscal year 2023 to fiscal year 2024?",
-      "passed": true,
-      "status_passed": true,
+      "passed": false,
+      "status_passed": false,
       "numeric_passed": true,
       "calc_passed": true,
       "page_passed": true,
-      "is_grounded": true,
-      "unverified_numbers": [],
+      "is_grounded": false,
+      "unverified_numbers": [
+        "0.30",
+        "$201",
+        "$200",
+        "$200",
+        "0.30"
+      ],
       "expected_numbers": [],
       "matched_numbers": [],
       "expected_calc": "0.30%",
@@ -246,8 +254,8 @@
         "29",
         "45"
       ],
-      "latency_s": 9.04,
-      "answer_excerpt": "Apple\u2019s iPhone net sales grew **0.30%** from fiscal 2023 to fiscal 2024. Using the reported sales of **$201,183 million** in FY2024 and **$2..."
+      "latency_s": 9.39,
+      "answer_excerpt": "Apple\u2019s iPhone net sales grew **0.30%** from fiscal 2023 to fiscal 2024. The calculation is \\((\\$201,183M-\\$200,583M) \\div |\\$200,583M| \\tim..."
     },
     {
       "question_id": "DEV-008",
@@ -276,8 +284,8 @@
         "38",
         "42"
       ],
-      "latency_s": 3.11,
-      "answer_excerpt": "Management attributed the increase in Services net sales in 2024 versus 2023 primarily to higher net sales from **advertising, the App Store..."
+      "latency_s": 4.23,
+      "answer_excerpt": "Management attributed the increase in Services net sales in 2024 compared with 2023 primarily to higher net sales from **advertising, the Ap..."
     },
     {
       "question_id": "DEV-009",
@@ -306,8 +314,8 @@
         "51",
         "31"
       ],
-      "latency_s": 4.48,
-      "answer_excerpt": "The provided filings do not contain sufficient evidence to answer this question. The excerpts report annual net sales through fiscal year 20..."
+      "latency_s": 4.55,
+      "answer_excerpt": "The provided filings do not contain sufficient evidence to answer this question. The excerpts include annual sales figures, but not Apple\u2019s ..."
     },
     {
       "question_id": "DEV-010",
@@ -360,8 +368,8 @@
         "84",
         "93"
       ],
-      "latency_s": 6.01,
-      "answer_excerpt": "Microsoft\u2019s total revenue for fiscal year 2024 was **$245,122 million** (about **$245.1 billion**), reported as total revenue in the segment..."
+      "latency_s": 5.88,
+      "answer_excerpt": "Microsoft\u2019s total revenue for fiscal year 2024 was **$245,122 million** (year ended June 30, 2024; Item 8, page 92). The 2024 Form 10-K also..."
     },
     {
       "question_id": "DEV-012",
@@ -384,13 +392,13 @@
         "42",
         "38",
         "43",
+        "46",
         "40",
         "44",
-        "94",
-        "166"
+        "94"
       ],
-      "latency_s": 13.95,
-      "answer_excerpt": "Microsoft\u2019s fiscal 2024 operating margin was **44.64%**.\n\nUsing the reported totals, the formula is **operating income \u00f7 revenue \u00d7 100**: $1..."
+      "latency_s": 9.34,
+      "answer_excerpt": "Microsoft\u2019s fiscal 2024 operating margin was **44.64%**. It is calculated as total operating income of **$109,433 million** divided by total..."
     },
     {
       "question_id": "DEV-013",
@@ -423,8 +431,8 @@
         "2",
         "66"
       ],
-      "latency_s": 5.9,
-      "answer_excerpt": "Amazon\u2019s AWS segment net sales were **$107,556 million** in fiscal year 2024 (Item 8, page 66, \u201cSegment Information\u201d). The 2024 Form 10-K al..."
+      "latency_s": 4.77,
+      "answer_excerpt": "Amazon\u2019s AWS segment net sales were **$107,556 million** in fiscal year 2024 (Item 8, Page 66, segment information). The 2024 Form 10-K also..."
     },
     {
       "question_id": "DEV-014",
@@ -453,8 +461,8 @@
         "49",
         "27"
       ],
-      "latency_s": 12.59,
-      "answer_excerpt": "Apple\u2019s FY2024 operating margin was **31.51%**. The provided Microsoft excerpts do not include the FY2024 operating income and total revenue..."
+      "latency_s": 15.0,
+      "answer_excerpt": "Apple\u2019s FY2024 operating margin was **31.51%**: operating income of **$123,216 million** divided by total net sales of **$391,035 million** ..."
     },
     {
       "question_id": "DEV-015",
@@ -487,21 +495,28 @@
         "72",
         "93"
       ],
-      "latency_s": 4.01,
-      "answer_excerpt": "Meta\u2019s fiscal-year 2024 revenue was **$164,501 million** for the year ended December 31, 2024 (Item 8, Page 71, Consolidated Statements of I..."
+      "latency_s": 5.18,
+      "answer_excerpt": "Meta reported **$164,501 million in revenue for fiscal year 2024** (year ended December 31, 2024). *(Item 8, pp. 71\u201372.)*\n\nThe FY2024 Form 1..."
     },
     {
       "question_id": "DEV-016",
       "task_type": "user_shorthand_calculation",
       "company": "Amazon.com, Inc.",
       "question": "What was Amazon's revenue growth in 2023?",
-      "passed": true,
-      "status_passed": true,
+      "passed": false,
+      "status_passed": false,
       "numeric_passed": true,
       "calc_passed": true,
       "page_passed": false,
-      "is_grounded": true,
-      "unverified_numbers": [],
+      "is_grounded": false,
+      "unverified_numbers": [
+        "11.83",
+        "513",
+        "983",
+        "513",
+        "983",
+        "11.83"
+      ],
       "expected_numbers": [],
       "matched_numbers": [],
       "expected_calc": "+11.83%",
@@ -510,15 +525,15 @@
       "cited_pages": [
         "30",
         "38",
+        "24",
         "37",
         "37",
         "31",
         "36",
-        "51",
-        "90"
+        "51"
       ],
-      "latency_s": 8.78,
-      "answer_excerpt": "Amazon\u2019s revenue (total net sales) grew **$60,802 million, or 11.83%, in 2023**. The calculation uses FY2023 sales of **$574,785 million** l..."
+      "latency_s": 10.93,
+      "answer_excerpt": "Amazon\u2019s revenue (total net sales) grew **$60,802 million, or 11.83%, in 2023**. FY2023 net sales were **$574,785 million**, compared with *..."
     },
     {
       "question_id": "DEV-017",
@@ -551,8 +566,8 @@
         "48",
         "49"
       ],
-      "latency_s": 5.15,
-      "answer_excerpt": "Apple\u2019s 2024 net sales were **$391,035 million** (Item 8, page 23). The 2024 Form 10-K also reports comparative net sales of **$383,285 mill..."
+      "latency_s": 4.69,
+      "answer_excerpt": "Apple\u2019s 2024 net sales were **$391,035 million** (Item 8, \u201cProducts and Services Performance,\u201d printed page 23). The 2024 Form 10-K also rep..."
     },
     {
       "question_id": "DEV-018",
@@ -581,8 +596,8 @@
         "18",
         "43"
       ],
-      "latency_s": 9.08,
-      "answer_excerpt": "Microsoft\u2019s FY24 operating margin was **44.64%**: operating income of **$109,433 million** divided by total revenue of **$245,122 million** ..."
+      "latency_s": 10.75,
+      "answer_excerpt": "Microsoft\u2019s FY24 operating margin was **44.64%**.\n\n**Calculation:** Operating income \u00f7 total revenue \u00d7 100 = **$109,433 million \u00f7 $245,122 m..."
     },
     {
       "question_id": "DEV-019",
@@ -615,42 +630,40 @@
         "101",
         "6"
       ],
-      "latency_s": 3.49,
-      "answer_excerpt": "Meta Reality Labs reported an **operating loss of $17,729 million** for 2024 (Item 8, p. 60). The 2024 Form 10-K also presents comparative 2..."
+      "latency_s": 4.53,
+      "answer_excerpt": "Meta Reality Labs reported an **operating loss of $17,729 million** in 2024 (about **$17.73 billion**). *(FY2024 Form 10-K, Item 8, p. 60.)*..."
     },
     {
       "question_id": "DEV-020",
       "task_type": "user_shorthand_segment",
       "company": "Amazon.com, Inc.",
       "question": "Amazon AWS sales 2024",
-      "passed": true,
+      "passed": false,
       "status_passed": true,
-      "numeric_passed": true,
+      "numeric_passed": false,
       "calc_passed": true,
-      "page_passed": true,
+      "page_passed": false,
       "is_grounded": true,
       "unverified_numbers": [],
       "expected_numbers": [
         "107,556"
       ],
-      "matched_numbers": [
-        "107,556"
-      ],
+      "matched_numbers": [],
       "expected_calc": null,
       "matched_calc": null,
       "expected_page": "24",
       "cited_pages": [
+        "50",
         "30",
         "25",
         "90",
         "72",
         "2",
         "26",
-        "41",
-        "24"
+        "41"
       ],
-      "latency_s": 5.47,
-      "answer_excerpt": "Amazon AWS sales were **$107,556 million** in 2024 (Item 7, page 24, \u201cNet Sales\u201d table). The FY2024 10-K includes comparative data for prior..."
+      "latency_s": 6.78,
+      "answer_excerpt": "Amazon AWS sales (revenue) were **$108 billion in 2024**, as reported in the shareholder letter (Item 8, page 2). Amazon also reported AWS s..."
     }
   ]
 }

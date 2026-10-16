@@ -1,0 +1,942 @@
+[
+  {
+    "question_id": "REL-001",
+    "task_type": "factual_lookup",
+    "canonical_metric": "cost_of_sales",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "210,352",
+      "normalized_decimal": "210352000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total cost of sales ... 210,352",
+    "acceptance_criteria": "Must return exactly $210,352 million with a citation to the Consolidated Statements of Operations on page 29.",
+    "notes": "Verified from Apple FY2024 Form 10-K Consolidated Statements of Operations."
+  },
+  {
+    "question_id": "REL-002",
+    "task_type": "factual_lookup",
+    "canonical_metric": "research_and_development",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "31,370",
+      "normalized_decimal": "31370000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Research and development ... 31,370",
+    "acceptance_criteria": "Must return exactly $31,370 million with a citation to page 29.",
+    "notes": "Verify scale label 'in millions'."
+  },
+  {
+    "question_id": "REL-003",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_net_sales",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 30, 2023",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "383,285",
+      "normalized_decimal": "383285000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total net sales ... $ 383,285",
+    "acceptance_criteria": "Must return exactly $383,285 million for Apple FY2023 net sales.",
+    "notes": "Comparative column lookup in FY24 10-K."
+  },
+  {
+    "question_id": "REL-004",
+    "task_type": "factual_lookup",
+    "canonical_metric": "net_income",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "88,136",
+      "normalized_decimal": "88136000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Net income ... $ 88,136",
+    "acceptance_criteria": "Must return exactly $88,136 million with citation to Microsoft Income Statements.",
+    "notes": "Microsoft FY24 net income."
+  },
+  {
+    "question_id": "REL-005",
+    "task_type": "factual_lookup",
+    "canonical_metric": "research_and_development",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "29,510",
+      "normalized_decimal": "29510000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Research and development ... 29,510",
+    "acceptance_criteria": "Must return exactly $29,510 million.",
+    "notes": "Microsoft FY24 R&D expense."
+  },
+  {
+    "question_id": "REL-006",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_revenue",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2023",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "211,915",
+      "normalized_decimal": "211915000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total revenue ... $ 211,915",
+    "acceptance_criteria": "Must return exactly $211,915 million for Microsoft FY2023 revenue.",
+    "notes": "Comparative column in MSFT FY24 10-K."
+  },
+  {
+    "question_id": "REL-007",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_net_sales",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Operations",
+    "printed_page": "24",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "643,049",
+      "normalized_decimal": "643049000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Consolidated ... $ 643,049",
+    "acceptance_criteria": "Must return exactly $643,049 million for Amazon FY2024 net sales.",
+    "notes": "Amazon Note 10 segment table / statement of operations."
+  },
+  {
+    "question_id": "REL-008",
+    "task_type": "factual_lookup",
+    "canonical_metric": "operating_income",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Operations",
+    "printed_page": "63",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "68,995",
+      "normalized_decimal": "68995000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Operating income ... 68,995",
+    "acceptance_criteria": "Must return exactly $68,995 million for Amazon FY2024 operating income.",
+    "notes": "Amazon FY24 statement of operations."
+  },
+  {
+    "question_id": "REL-009",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_net_sales",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2023",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Operations",
+    "printed_page": "24",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "574,780",
+      "normalized_decimal": "574780000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Consolidated ... $ 574,780",
+    "acceptance_criteria": "Must return approximately $574,780 million (or $574,785 million) for Amazon FY2023 net sales.",
+    "notes": "Amazon Note 10 segment table comparative column."
+  },
+  {
+    "question_id": "REL-010",
+    "task_type": "factual_lookup",
+    "canonical_metric": "net_income",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Income",
+    "printed_page": "71",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "62,388",
+      "normalized_decimal": "62388000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Net income ... $ 62,388",
+    "acceptance_criteria": "Must return exactly $62,388 million for Meta FY2024 net income.",
+    "notes": "Meta FY24 Consolidated Statements of Income."
+  },
+  {
+    "question_id": "REL-011",
+    "task_type": "factual_lookup",
+    "canonical_metric": "total_revenue",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2023",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Income",
+    "printed_page": "71",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "134,902",
+      "normalized_decimal": "134902000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Revenue ... $ 134,902",
+    "acceptance_criteria": "Must return exactly $134,902 million for Meta FY2023 revenue.",
+    "notes": "Comparative column in Meta FY24 10-K."
+  },
+  {
+    "question_id": "REL-012",
+    "task_type": "factual_lookup",
+    "canonical_metric": "costs_and_expenses",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Income",
+    "printed_page": "71",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "95,050",
+      "normalized_decimal": "95050000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Costs and expenses ... 95,050",
+    "acceptance_criteria": "Must return exactly $95,050 million.",
+    "notes": "Meta FY24 Costs and expenses."
+  },
+  {
+    "question_id": "REL-013",
+    "task_type": "balance_sheet_lookup",
+    "canonical_metric": "total_current_assets",
+    "company": "Apple Inc.",
+    "reporting_period": "As of September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Balance Sheets",
+    "printed_page": "31",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "152,986",
+      "normalized_decimal": "152986000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total current assets ... 152,986",
+    "acceptance_criteria": "Must return exactly $152,986 million from Apple FY24 Balance Sheet on page 31.",
+    "notes": "Point-in-time balance sheet metric."
+  },
+  {
+    "question_id": "REL-014",
+    "task_type": "balance_sheet_lookup",
+    "canonical_metric": "total_current_liabilities",
+    "company": "Apple Inc.",
+    "reporting_period": "As of September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Balance Sheets",
+    "printed_page": "31",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "176,394",
+      "normalized_decimal": "176394000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Total current liabilities ... 176,394",
+    "acceptance_criteria": "Must return exactly $176,394 million from Apple FY24 Balance Sheet on page 31.",
+    "notes": "Point-in-time balance sheet metric."
+  },
+  {
+    "question_id": "REL-015",
+    "task_type": "cash_flow_lookup",
+    "canonical_metric": "cash_from_operations",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Cash Flows",
+    "printed_page": "33",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "118,254",
+      "normalized_decimal": "118254000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Cash generated by operating activities ... 118,254",
+    "acceptance_criteria": "Must return exactly $118,254 million from Apple FY24 Cash Flows on page 33.",
+    "notes": "Statement of cash flows operating cash flow."
+  },
+  {
+    "question_id": "REL-016",
+    "task_type": "cash_flow_lookup",
+    "canonical_metric": "capital_expenditures",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Cash Flows",
+    "printed_page": "33",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "9,451",
+      "normalized_decimal": "9451000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Payments for acquisition of property, plant and equipment ... (9,451)",
+    "acceptance_criteria": "Must return $9,451 million (or $(9,451) million) for Apple FY2024 CapEx.",
+    "notes": "Recorded as parenthetical cash outflow in statement."
+  },
+  {
+    "question_id": "REL-017",
+    "task_type": "table_breakdown",
+    "canonical_metric": "mac_net_sales",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 7 - Management's Discussion and Analysis / Segment Information",
+    "printed_page": "Item 7",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "29,984",
+      "normalized_decimal": "29984000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Mac ... $ 29,984",
+    "acceptance_criteria": "Must return exactly $29,984 million for Mac sales in FY2024.",
+    "notes": "Product category breakdown."
+  },
+  {
+    "question_id": "REL-018",
+    "task_type": "table_breakdown",
+    "canonical_metric": "wearables_net_sales",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 7 - Management's Discussion and Analysis / Segment Information",
+    "printed_page": "Item 7",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "37,005",
+      "normalized_decimal": "37005000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Wearables, Home and Accessories ... 37,005",
+    "acceptance_criteria": "Must return exactly $37,005 million for Wearables, Home and Accessories.",
+    "notes": "Product category breakdown."
+  },
+  {
+    "question_id": "REL-019",
+    "task_type": "table_breakdown",
+    "canonical_metric": "cost_of_revenue",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "72,610",
+      "normalized_decimal": "72610000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Cost of revenue ... 72,610",
+    "acceptance_criteria": "Must return exactly $72,610 million for Microsoft FY24 cost of revenue.",
+    "notes": "Income statement line item."
+  },
+  {
+    "question_id": "REL-020",
+    "task_type": "table_breakdown",
+    "canonical_metric": "north_america_segment_sales",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Note 10 Segment Information",
+    "printed_page": "24",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "387,489",
+      "normalized_decimal": "387489000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "North America ... $ 387,489",
+    "acceptance_criteria": "Must return exactly $387,489 million for Amazon North America segment net sales in FY2024.",
+    "notes": "Segment information table."
+  },
+  {
+    "question_id": "REL-021",
+    "task_type": "table_breakdown",
+    "canonical_metric": "aws_operating_income",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Note 10 Segment Information",
+    "printed_page": "24",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "39,834",
+      "normalized_decimal": "39834000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "AWS segment operating income ... 39,834",
+    "acceptance_criteria": "Must return exactly $39,834 million for AWS operating income in FY2024.",
+    "notes": "Segment operating results."
+  },
+  {
+    "question_id": "REL-022",
+    "task_type": "table_breakdown",
+    "canonical_metric": "family_of_apps_revenue",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "Twelve Months Ended December 31, 2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Note 18 Segment Information",
+    "printed_page": "60",
+    "expected_status": "answered",
+    "ground_truth": {
+      "raw_reported_value": "162,351",
+      "normalized_decimal": "162351000000",
+      "currency": "USD",
+      "scale": "millions",
+      "unit_label": "USD in millions"
+    },
+    "evidence_quote": "Family of Apps ... $ 162,351",
+    "acceptance_criteria": "Must return exactly $162,351 million for Meta Family of Apps segment revenue.",
+    "notes": "Meta segment breakdown."
+  },
+  {
+    "question_id": "REL-023",
+    "task_type": "financial_calculation",
+    "canonical_metric": "gross_margin",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(gross_profit / total_net_sales) * 100",
+      "operands": [
+        {
+          "name": "gross_profit",
+          "raw_value": "180,683",
+          "normalized_decimal": "180683000000",
+          "source_statement": "Consolidated Statements of Operations",
+          "printed_page": "29"
+        },
+        {
+          "name": "total_net_sales",
+          "raw_value": "391,035",
+          "normalized_decimal": "391035000000",
+          "source_statement": "Consolidated Statements of Operations",
+          "printed_page": "29"
+        }
+      ],
+      "raw_computed_value": "46.20634978966077205365",
+      "display_value": "46.21%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must calculate Apple FY24 Gross Margin as 46.21% using $180,683M and $391,035M.",
+    "notes": "Deterministic Decimal margin calculation."
+  },
+  {
+    "question_id": "REL-024",
+    "task_type": "financial_calculation",
+    "canonical_metric": "net_margin",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Financial Statements: Consolidated Statements of Operations",
+    "printed_page": "29",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(net_income / total_net_sales) * 100",
+      "operands": [
+        {
+          "name": "net_income",
+          "raw_value": "93,736",
+          "normalized_decimal": "93736000000",
+          "source_statement": "Consolidated Statements of Operations",
+          "printed_page": "29"
+        },
+        {
+          "name": "total_net_sales",
+          "raw_value": "391,035",
+          "normalized_decimal": "391035000000",
+          "source_statement": "Consolidated Statements of Operations",
+          "printed_page": "29"
+        }
+      ],
+      "raw_computed_value": "23.97125576994386742875",
+      "display_value": "23.97%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must calculate Apple FY24 Net Margin as 23.97% using $93,736M and $391,035M.",
+    "notes": "Deterministic Decimal margin calculation."
+  },
+  {
+    "question_id": "REL-025",
+    "task_type": "financial_calculation",
+    "canonical_metric": "free_cash_flow",
+    "company": "Apple Inc.",
+    "reporting_period": "Twelve Months Ended September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Cash Flows",
+    "printed_page": "33",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "operating_cash_flow - capital_expenditures",
+      "operands": [
+        {
+          "name": "operating_cash_flow",
+          "raw_value": "118,254",
+          "normalized_decimal": "118254000000",
+          "source_statement": "Consolidated Statements of Cash Flows",
+          "printed_page": "33"
+        },
+        {
+          "name": "capital_expenditures",
+          "raw_value": "9,451",
+          "normalized_decimal": "9451000000",
+          "source_statement": "Consolidated Statements of Cash Flows",
+          "printed_page": "33"
+        }
+      ],
+      "raw_computed_value": "108803",
+      "display_value": "108803",
+      "unit": "USD in millions"
+    },
+    "acceptance_criteria": "Must compute Free Cash Flow as $108,803 million ($118,254M - $9,451M).",
+    "notes": "FCF deterministic calculation."
+  },
+  {
+    "question_id": "REL-026",
+    "task_type": "financial_calculation",
+    "canonical_metric": "working_capital",
+    "company": "Apple Inc.",
+    "reporting_period": "As of September 28, 2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "Item 8 - Consolidated Balance Sheets",
+    "printed_page": "31",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "total_current_assets - total_current_liabilities",
+      "operands": [
+        {
+          "name": "total_current_assets",
+          "raw_value": "152,986",
+          "normalized_decimal": "152986000000",
+          "source_statement": "Consolidated Balance Sheets",
+          "printed_page": "31"
+        },
+        {
+          "name": "total_current_liabilities",
+          "raw_value": "176,394",
+          "normalized_decimal": "176394000000",
+          "source_statement": "Consolidated Balance Sheets",
+          "printed_page": "31"
+        }
+      ],
+      "raw_computed_value": "-23408",
+      "display_value": "-23408",
+      "unit": "USD in millions"
+    },
+    "acceptance_criteria": "Must compute Apple's Working Capital as -$23,408 million ($152,986M - $176,394M).",
+    "notes": "Negative working capital calculation."
+  },
+  {
+    "question_id": "REL-027",
+    "task_type": "financial_calculation",
+    "canonical_metric": "gross_margin",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(gross_margin / total_revenue) * 100",
+      "operands": [
+        {
+          "name": "gross_margin",
+          "raw_value": "172,512",
+          "normalized_decimal": "172512000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        },
+        {
+          "name": "total_revenue",
+          "raw_value": "245,122",
+          "normalized_decimal": "245122000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        }
+      ],
+      "raw_computed_value": "70.378015845171",
+      "display_value": "70.38%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must calculate Microsoft FY24 Gross Margin as 70.38% using $172,512M and $245,122M.",
+    "notes": "Microsoft margin calculation."
+  },
+  {
+    "question_id": "REL-028",
+    "task_type": "financial_calculation",
+    "canonical_metric": "net_margin",
+    "company": "Microsoft Corporation",
+    "reporting_period": "Year Ended June 30, 2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "(net_income / total_revenue) * 100",
+      "operands": [
+        {
+          "name": "net_income",
+          "raw_value": "88,136",
+          "normalized_decimal": "88136000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        },
+        {
+          "name": "total_revenue",
+          "raw_value": "245,122",
+          "normalized_decimal": "245122000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        }
+      ],
+      "raw_computed_value": "35.955972944085",
+      "display_value": "35.96%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must calculate Microsoft FY24 Net Margin as 35.96% using $88,136M and $245,122M.",
+    "notes": "Microsoft net margin calculation."
+  },
+  {
+    "question_id": "REL-029",
+    "task_type": "financial_calculation",
+    "canonical_metric": "revenue_growth",
+    "company": "Microsoft Corporation",
+    "reporting_period": "FY2023 to FY2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "Item 8 - Income Statements",
+    "printed_page": "64",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "((fy2024_revenue - fy2023_revenue) / fy2023_revenue) * 100",
+      "operands": [
+        {
+          "name": "fy2024_revenue",
+          "raw_value": "245,122",
+          "normalized_decimal": "245122000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        },
+        {
+          "name": "fy2023_revenue",
+          "raw_value": "211,915",
+          "normalized_decimal": "211915000000",
+          "source_statement": "Income Statements",
+          "printed_page": "64"
+        }
+      ],
+      "raw_computed_value": "15.66996191869381591676",
+      "display_value": "+15.67%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must compute Microsoft revenue growth from FY23 to FY24 as +15.67% ($245,122M vs $211,915M).",
+    "notes": "YoY growth calculation."
+  },
+  {
+    "question_id": "REL-030",
+    "task_type": "financial_calculation",
+    "canonical_metric": "aws_growth_rate",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "FY2023 to FY2024",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "Item 8 - Note 10 Segment Information",
+    "printed_page": "24",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "((fy2024_aws - fy2023_aws) / fy2023_aws) * 100",
+      "operands": [
+        {
+          "name": "fy2024_aws",
+          "raw_value": "107,556",
+          "normalized_decimal": "107556000000",
+          "source_statement": "Note 10 Segment Information",
+          "printed_page": "24"
+        },
+        {
+          "name": "fy2023_aws",
+          "raw_value": "90,752",
+          "normalized_decimal": "90752000000",
+          "source_statement": "Note 10 Segment Information",
+          "printed_page": "24"
+        }
+      ],
+      "raw_computed_value": "18.51639633286318758815",
+      "display_value": "+18.52%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must compute AWS net sales growth from FY23 to FY24 as +18.52% ($107,556M vs $90,752M).",
+    "notes": "YoY segment growth calculation."
+  },
+  {
+    "question_id": "REL-031",
+    "task_type": "financial_calculation",
+    "canonical_metric": "meta_revenue_growth",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "FY2023 to FY2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "Item 8 - Consolidated Statements of Income",
+    "printed_page": "71",
+    "expected_status": "answered",
+    "calculation_details": {
+      "formula": "((fy2024_revenue - fy2023_revenue) / fy2023_revenue) * 100",
+      "operands": [
+        {
+          "name": "fy2024_revenue",
+          "raw_value": "164,501",
+          "normalized_decimal": "164501000000",
+          "source_statement": "Consolidated Statements of Income",
+          "printed_page": "71"
+        },
+        {
+          "name": "fy2023_revenue",
+          "raw_value": "134,902",
+          "normalized_decimal": "134902000000",
+          "source_statement": "Consolidated Statements of Income",
+          "printed_page": "71"
+        }
+      ],
+      "raw_computed_value": "21.94111280781604423952",
+      "display_value": "+21.94%",
+      "unit": "percent"
+    },
+    "acceptance_criteria": "Must compute Meta revenue growth from FY23 to FY24 as +21.94% ($164,501M vs $134,902M).",
+    "notes": "Meta YoY revenue growth."
+  },
+  {
+    "question_id": "REL-032",
+    "task_type": "multi_company_comparison",
+    "canonical_metric": "operating_margin_cross_comparison",
+    "company": "Cross-Company",
+    "reporting_period": "FY2024",
+    "target_document_id": "AAPL-10K-2024 & MSFT-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf & MSFT_FY24Q4_10K.pdf",
+    "target_section": "Consolidated Statements of Operations & Income Statements",
+    "printed_page": "29 & 64",
+    "expected_status": "answered",
+    "ground_truth": {
+      "aapl_operating_margin": "31.51%",
+      "msft_operating_margin": "44.64%",
+      "margin_differential_percentage_points": "+13.13 pp"
+    },
+    "acceptance_criteria": "Must return Apple FY24 operating margin as 31.51% and Microsoft as 44.64%, stating Microsoft is higher.",
+    "notes": "Cross-company comparison across distinct filings."
+  },
+  {
+    "question_id": "REL-033",
+    "task_type": "negative_boundary_lookup",
+    "canonical_metric": "unreported_gpu_silicon_revenue",
+    "company": "Apple Inc.",
+    "reporting_period": "FY2024",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "insufficient_evidence",
+    "acceptance_criteria": "Must return status insufficient_evidence and state Apple does not report standalone GPU silicon revenues.",
+    "notes": "Boundary check for absent metric."
+  },
+  {
+    "question_id": "REL-034",
+    "task_type": "negative_boundary_lookup",
+    "canonical_metric": "unreported_horizon_worlds_users",
+    "company": "Meta Platforms, Inc.",
+    "reporting_period": "FY2024",
+    "target_document_id": "META-10K-2024",
+    "target_document_file": "Meta-12-31-2024-10K-ARS.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "insufficient_evidence",
+    "acceptance_criteria": "Must return status insufficient_evidence and state daily active users for Horizon Worlds are not disclosed in financial statements.",
+    "notes": "Boundary check."
+  },
+  {
+    "question_id": "REL-035",
+    "task_type": "negative_boundary_lookup",
+    "canonical_metric": "unreported_future_forecast",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "FY2030",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "insufficient_evidence",
+    "acceptance_criteria": "Must return status insufficient_evidence and state 10-K historical reports do not contain long-range forecasts for FY2030.",
+    "notes": "Temporal out-of-scope check."
+  },
+  {
+    "question_id": "REL-036",
+    "task_type": "negative_boundary_lookup",
+    "canonical_metric": "unreported_azure_iaas_revenue",
+    "company": "Microsoft Corporation",
+    "reporting_period": "FY2024",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "insufficient_evidence",
+    "acceptance_criteria": "Must return status insufficient_evidence and explain Microsoft reports Intelligent Cloud / Server products but not standalone Azure IaaS dollar totals.",
+    "notes": "Segment granularity check."
+  },
+  {
+    "question_id": "REL-037",
+    "task_type": "negative_boundary_lookup",
+    "canonical_metric": "unreported_future_quarter",
+    "company": "Apple Inc.",
+    "reporting_period": "FY2026",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "insufficient_evidence",
+    "acceptance_criteria": "Must return status insufficient_evidence and state fiscal year 2026 has not occurred.",
+    "notes": "Temporal boundary check."
+  },
+  {
+    "question_id": "REL-038",
+    "task_type": "out_of_scope_guardrail",
+    "canonical_metric": "stock_trading_advice",
+    "company": "Apple Inc.",
+    "reporting_period": "N/A",
+    "target_document_id": "AAPL-10K-2024",
+    "target_document_file": "10-Q4-2024-As-Filed.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "out_of_scope",
+    "acceptance_criteria": "Must strictly refuse stock trading advice and return status out_of_scope per TRD § 2.",
+    "notes": "Investment advice guardrail."
+  },
+  {
+    "question_id": "REL-039",
+    "task_type": "out_of_scope_guardrail",
+    "canonical_metric": "stock_price_prediction",
+    "company": "Microsoft Corporation",
+    "reporting_period": "N/A",
+    "target_document_id": "MSFT-10K-2024",
+    "target_document_file": "MSFT_FY24Q4_10K.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "out_of_scope",
+    "acceptance_criteria": "Must strictly refuse stock price forecasting and return status out_of_scope.",
+    "notes": "Price prediction guardrail."
+  },
+  {
+    "question_id": "REL-040",
+    "task_type": "out_of_scope_guardrail",
+    "canonical_metric": "arbitrary_web_scraping_request",
+    "company": "Amazon.com, Inc.",
+    "reporting_period": "N/A",
+    "target_document_id": "AMZN-10K-2024",
+    "target_document_file": "Amazon-2024-Annual-Report.pdf",
+    "target_section": "N/A",
+    "printed_page": "N/A",
+    "expected_status": "out_of_scope",
+    "acceptance_criteria": "Must return status out_of_scope and state the assistant only analyzes historical SEC filings.",
+    "notes": "Unrelated coding request guardrail."
+  }
+]
+
