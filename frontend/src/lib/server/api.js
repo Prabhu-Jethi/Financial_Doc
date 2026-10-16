@@ -1,7 +1,7 @@
 import { resolveAuditedQuery, CORPUS_DOCUMENTS } from "./mockEngine.js";
 
 const FASTAPI_BASE_URL = process.env.FASTAPI_BASE_URL || "http://localhost:8000";
-const QUERY_TIMEOUT_MS = 15000; // Quick 15s deadline before graceful fallback
+const QUERY_TIMEOUT_MS = 50000; // Quick 15s deadline before graceful fallback
 
 /**
  * Server-side adapter forwarding queries to FastAPI with verified SEC engine fallback.
