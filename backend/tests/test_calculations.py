@@ -52,6 +52,14 @@ class TestFinanceCalculations:
         with pytest.raises(ZeroDivisionError):
             self.calc.compute_operating_margin(Decimal("100"), Decimal("0"))
 
+    def test_calculate_operating_margin_negative_loss(self):
+        # Negative operating income (e.g. Meta Reality Labs loss of $(17,729)M on $1,788M revenue)
+        loss = Decimal("-17729")
+        rev = Decimal("1788")
+        result = self.calc.compute_operating_margin(loss, rev)
+        assert result.display_value == "-991.55"
+        assert result.unit == "%"
+
     def test_compute_gross_margin(self):
          # Apple FY24: Gross Profit $180,683M / Total Net Sales $391,035M = 46.21%
         gp = Decimal("180683")
