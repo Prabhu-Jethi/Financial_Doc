@@ -93,6 +93,35 @@ class TestCitationsAndGrounding:
         assert len(citations) == 1
         assert citations[0].printed_page == "64"
 
+    def test_repeated_comparative_figures_provenance_tagging(self):
+        """
+        Apple reported FY2023 Net Sales ($383,285M) in both FY2023 10-K (Page 31)
+        and the comparative column of FY2024 10-K (Page 29). Citation service must
+        distinguish and retain distinct document_id and printed_page metadata.
+        """
+        doc_fy24 = Document(
+            page_content="Years ended September 28, 2024, September 30, 2023\nTotal net sales $ 391,035 $ 383,285",
+            metadata={"document_id": "aapl-202410-10k", "company": "Apple Inc.", "printed_page": "29", "section": "Operations"}
+        )
+        doc_fy23 = Document(
+            page_content="Years ended September 30, 2023\nTotal net sales $ 383,285",
+            metadata={"document_id": "aapl-202309-10k", "company": "Apple Inc.", "printed_page": "31", "section": "Operations"}
+        )
+
+        citations = self.evidence_service.verify_provenance_citations(
+            docs=[doc_fy24, doc_fy23],
+            answer_text="Apple reported FY2023 total net sales of $383,285 million in both filings.",
+            calculations=[]
+        )
+
+        # Both distinct filings and pages must be cited
+        pages = {c.printed_page for c in citations}
+        doc_ids = {c.document_id for c in citations}
+        assert "29" in pages
+        assert "31" in pages
+        assert "aapl-202410-10k" in doc_ids
+        assert "aapl-202309-10k" in doc_ids
+
     # =========================================================================
     # 2. NUMERICAL GROUNDING AUDITOR TESTS
     # =========================================================================
