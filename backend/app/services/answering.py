@@ -201,15 +201,20 @@ class AnswerService:
     def answer_query(self, question: str, company: Optional[str] = None, document_id: Optional[str] = None):
         ## Configure dynamic retrieval filters (reset per request to prevent cross-query leakage)
         q_lower = question.lower()
-        if any (trigger in q_lower for trigger in ["buy or sell", "buy/sell", "should i buy", "should i sell", "invest in", "stock advice"]):
+        out_of_scope_triggers = [
+            "buy or sell", "buy/sell", "should i buy", "should i sell", "invest in", 
+            "stock advice", "good buy", "price prediction", "price target", "reach $", 
+            "stock reach", "write a python", "python script", "scrape", "beautifulsoup"
+        ]
+        if any(trigger in q_lower for trigger in out_of_scope_triggers):
             return {
-                "answer_text": "I can only provide factual historical financial data and calculations from filed SEC reports. Per policy, I cannot provide investment advice, stock recommendations, or buy/sell guidance.",
+                "answer_text": "I can only provide factual historical financial data and calculations from filed SEC reports. Per policy, I cannot provide investment advice, price predictions, or arbitrary code execution.",
                 "citations": [],
                 "facts": [],
                 "status": AnswerStatus.OUT_OF_SCOPE,
                 "docs": [],
                 "calculations": [],
-                "missing_information": ["Query requested investment/trading advice which is out of scope per policy."]
+                "missing_information": ["Query requested investment advice, forecasting, or code generation which is out of scope per policy."]
             }
         
         self.retriever.document_id = document_id if document_id else None
