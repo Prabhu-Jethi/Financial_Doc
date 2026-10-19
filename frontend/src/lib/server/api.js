@@ -1,24 +1,43 @@
 import { resolveAuditedQuery, CORPUS_DOCUMENTS } from "./mockEngine.js";
+import { createClient } from "../supabase/server.js";
 
 const FASTAPI_BASE_URL = process.env.FASTAPI_BASE_URL || "http://localhost:8000";
 const QUERY_TIMEOUT_MS = 50000; // Quick 15s deadline before graceful fallback
 
 /**
  * Server-side adapter forwarding queries to FastAPI with verified SEC engine fallback.
- * Keeps credentials and internal URLs on the Next.js server.
+ * Forwards caller's verified Supabase JWT Bearer token to FastAPI.
  */
 export async function forwardQueryToFastAPI(payload, requestId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);
 
+  // Retrieve caller's verified Supabase access token
+  let token = null;
   try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    token = session?.access_token || null;
+  } catch (authErr) {
+    // Session token absent or in development without Supabase configured
+  }
+
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      "X-Request-ID": requestId,
+      Accept: "application/json",
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/query`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Request-ID": requestId,
-        Accept: "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
       signal: controller.signal,
       cache: "no-store", // Never cache financial answers per rules.md § 3.1
@@ -32,9 +51,17 @@ export async function forwardQueryToFastAPI(payload, requestId) {
       };
     }
 
+    if (res.status === 401) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || "Authentication required. Please sign in with Google.");
+    }
+
     // If FastAPI responded with an error, fall back to SEC index
     console.warn(`FastAPI returned HTTP ${res.status}. Falling back to verified local SEC corpus.`);
   } catch (error) {
+    if (error.message.includes("Authentication required")) {
+      throw error;
+    }
     console.warn(`FastAPI unavailable (${error.message}). Resolving via verified SEC corpus engine.`);
   } finally {
     clearTimeout(timeoutId);
@@ -93,8 +120,23 @@ export async function fetchDocumentMetadata() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
 
+    let token = null;
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token || null;
+    } catch (e) {
+      // quiet fallback
+    }
+
+    const headers = { Accept: "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/documents`, {
       cache: "no-store",
+      headers,
       signal: controller.signal,
     });
 
