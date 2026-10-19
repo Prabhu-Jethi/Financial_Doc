@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     supabase_url: str = ""
     supabase_secret_key: str = ""
+    supabase_jwt_secret: str = ""
 
     ## operational timeouts
     query_deadline_seconds: int = 45

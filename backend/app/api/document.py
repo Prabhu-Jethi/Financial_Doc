@@ -1,15 +1,17 @@
 import psycopg
 from typing import List
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from ..config import settings
 from ..integrations.storage import SupabaseStorageService
+from ..integrations.auth import get_current_user, AuthenticatedUser
 from ..schemas import DocumentMetadataResponse
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 storage_service = SupabaseStorageService()
 
 @router.get("", response_model=List[DocumentMetadataResponse])
-def list_document():
+def list_document(user: AuthenticatedUser = Depends(get_current_user)):
+    """Lists curated documents accessible to authenticated users."""
     query = """
     SELECT document_id, company, ticker, report_type, report_fiscal_year,
            period_ended::text, filing_date::text, source_url, file_name, status, created_at::text
@@ -30,7 +32,8 @@ def list_document():
     ]
 
 @router.get('/{document_id}/pdf_url')
-def get_document_pdf_url(document_id: str):
+def get_document_pdf_url(document_id: str, user: AuthenticatedUser = Depends(get_current_user)):
+    """Generates signed URL for document PDF. Protected by authentication."""
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT file_name FROM documents WHERE document_id = %s;", (document_id,))

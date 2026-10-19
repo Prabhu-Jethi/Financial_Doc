@@ -1,8 +1,9 @@
 import uuid
 import time
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, Depends
 from ..schemas import QueryRequest, QueryResponse
 from ..services.answering import AnswerService
+from ..integrations.auth import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/query", tags=["Query"])
 
@@ -10,8 +11,16 @@ answering_service = AnswerService()
 
 
 @router.post("", response_model=QueryResponse)
-def execute_query(req: QueryRequest, x_request_id: str = Header(default=None)):
-    """Executes audited financial Q&A via AnswerService and returns cited response to frontend."""
+def execute_query(
+    req: QueryRequest,
+    x_request_id: str = Header(default=None),
+    user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Executes audited financial Q&A via AnswerService.
+    Protected endpoint: Requires valid Supabase Bearer token.
+    Extracts verified user_id from token 'sub' claim.
+    """
     start_time = time.time()
     req_id = x_request_id or f"req_{uuid.uuid4().hex[:8]}"
 
