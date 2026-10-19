@@ -6,6 +6,9 @@ import MessageThread from "../components/MessageThread";
 import ChatInput from "../components/ChatInput";
 import InspectorDrawer from "../components/InspectorDrawer";
 import UploadModal from "../components/UploadModal";
+import PdfViewerModal from "../components/PdfViewerModal";
+import CompareMatrixModal from "../components/CompareMatrixModal";
+import { createClient } from "../lib/supabase/browser";
 
 export default function Home() {
   const [question, setQuestion] = useState("");
@@ -17,14 +20,28 @@ export default function Home() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
+  // Authenticated Supabase User
+  const [currentUser, setCurrentUser] = useState(null);
+
   // Active Inspector Target
   const [activeCitation, setActiveCitation] = useState(null);
   const [activeDocument, setActiveDocument] = useState(null);
+
+  // PDF Viewer Modal State
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfTargetCitation, setPdfTargetCitation] = useState(null);
+  const [pdfTargetDoc, setPdfTargetDoc] = useState(null);
+
+  // Multi-Company Benchmark Matrix Modal State
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   // Documents
   const [documents, setDocuments] = useState([]);
   const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [health, setHealth] = useState({ active_engine: "sec_10k_index" });
+
+  // Theme State (Dark / Light)
+  const [theme, setTheme] = useState("light");
 
   const abortControllerRef = useRef(null);
   const scrollRef = useRef(null);
@@ -32,7 +49,66 @@ export default function Home() {
   useEffect(() => {
     fetchHealth();
     fetchDocuments();
+
+    // 1. Initialize and monitor Supabase user session
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user) {
+          setCurrentUser(data.user);
+        }
+      });
+
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        setCurrentUser(session?.user || null);
+        if (event === "SIGNED_OUT") {
+          window.location.href = "/login";
+        }
+      });
+
+      // Cleanup subscription
+      return () => {
+        authListener?.subscription?.unsubscribe();
+      };
+    } catch (e) {
+      // quiet fallback in local testing
+    }
+
+    // 2. Theme initialization
+    try {
+      const savedTheme = localStorage.getItem("docintel_theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        setTheme(savedTheme);
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch (e) {
+      // quiet fallback
+    }
   }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (e) {
+      // quiet fallback
+    }
+    window.location.href = "/login";
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    try {
+      localStorage.setItem("docintel_theme", nextTheme);
+    } catch (e) {
+      // quiet fallback
+    }
+  };
 
   const fetchHealth = async () => {
     try {
@@ -179,7 +255,16 @@ export default function Home() {
   const handleInspectCitation = (cite) => {
     setActiveCitation(cite);
     setActiveDocument(null);
+    setPdfTargetCitation(cite);
+    setPdfTargetDoc(null);
+    setPdfModalOpen(true);
     setInspectorOpen(true);
+  };
+
+  const handlePreviewDocument = (doc) => {
+    setPdfTargetDoc(doc);
+    setPdfTargetCitation(null);
+    setPdfModalOpen(true);
   };
 
   const handleSelectHistory = (hItem) => {
@@ -266,14 +351,21 @@ Quote: "${c.exact_quote}"`
       {/* Left Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         documents={documents}
         selectedDocIds={selectedDocIds}
         onToggleDocSelection={handleToggleDocSelection}
         onOpenUpload={() => setUploadModalOpen(true)}
+        onPreviewDocument={handlePreviewDocument}
+        onOpenCompare={() => setCompareModalOpen(true)}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
         history={history}
         onSelectHistory={handleSelectHistory}
         onNewSession={handleNewSession}
         activeEngine={health.active_engine}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Chat & Query Stage */}
@@ -285,7 +377,8 @@ Quote: "${c.exact_quote}"`
               type="button"
               className="btn-sidebar-toggle"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Toggle sidebar"
+              title={sidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+              aria-label="Toggle sidebar"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="3" y1="12" x2="21" y2="12" />
@@ -301,6 +394,54 @@ Quote: "${c.exact_quote}"`
           </div>
 
           <div className="top-bar-right">
+            {/* Multi-Company Comparison Matrix Button */}
+            <button
+              type="button"
+              className="btn-top-action btn-compare-highlight"
+              onClick={() => setCompareModalOpen(true)}
+              title="Compare 4-Company Benchmark Matrix (AAPL, MSFT, AMZN, META)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 20V10" />
+                <path d="M12 20V4" />
+                <path d="M6 20v-6" />
+              </svg>
+              <span>Compare Matrix</span>
+            </button>
+
+            {/* Theme Light/Dark Toggler Button */}
+            <button
+              type="button"
+              className="btn-theme-toggle"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              aria-label="Toggle color theme"
+            >
+              {theme === "dark" ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                  <span>Light</span>
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                  <span>Dark</span>
+                </>
+              )}
+            </button>
+
             {messages.length > 0 && (
               <button
                 type="button"
@@ -324,6 +465,56 @@ Quote: "${c.exact_quote}"`
               </svg>
               <span>Chunk Inspector</span>
             </button>
+
+            {/* Authenticated User Profile Pill */}
+            {currentUser ? (
+              <div className="top-bar-user-badge" title={`Signed in as ${currentUser.email}`}>
+                <div className="user-avatar-circle mini">
+                  {currentUser.user_metadata?.avatar_url ? (
+                    <img
+                      src={currentUser.user_metadata.avatar_url}
+                      alt="User"
+                      className="user-avatar-img"
+                    />
+                  ) : (
+                    <span>
+                      {currentUser.user_metadata?.full_name
+                        ? currentUser.user_metadata.full_name
+                            .split(/\s+/)
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase()
+                        : (currentUser.email || "U")[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <span className="user-email-label">
+                  {currentUser.user_metadata?.full_name || currentUser.email?.split("@")[0]}
+                </span>
+                <button
+                  type="button"
+                  className="btn-top-signout"
+                  onClick={handleSignOut}
+                  title="Sign out of your account"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <a
+                href="/login"
+                className="btn-top-action btn-top-login"
+                title="Sign in with Google"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                <span>Sign In</span>
+              </a>
+            )}
           </div>
         </header>
 
@@ -357,6 +548,16 @@ Quote: "${c.exact_quote}"`
         onClose={() => setInspectorOpen(false)}
         activeCitation={activeCitation}
         activeDocument={activeDocument}
+        onOpenPdfModal={(target) => {
+          if (target?.exact_quote || target?.printed_page) {
+            setPdfTargetCitation(target);
+            setPdfTargetDoc(null);
+          } else {
+            setPdfTargetDoc(target);
+            setPdfTargetCitation(null);
+          }
+          setPdfModalOpen(true);
+        }}
       />
 
       {/* Upload Document Modal */}
@@ -364,6 +565,21 @@ Quote: "${c.exact_quote}"`
         isOpen={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
         onDocumentUploaded={handleDocumentUploaded}
+      />
+
+      {/* Interactive PDF Provenance Viewer Modal */}
+      <PdfViewerModal
+        isOpen={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        citation={pdfTargetCitation}
+        document={pdfTargetDoc}
+      />
+
+      {/* Multi-Company Comparison Benchmark Matrix Modal */}
+      <CompareMatrixModal
+        isOpen={compareModalOpen}
+        onClose={() => setCompareModalOpen(false)}
+        onSelectPrompt={(p) => handleExecuteQuery(p)}
       />
     </div>
   );
