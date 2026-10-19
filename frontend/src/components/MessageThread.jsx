@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import FinancialChart from "./FinancialChart";
+import { exportFinancialModelToExcel } from "../lib/exportExcel";
 
 const STARTER_PROMPTS = [
   {
@@ -50,6 +52,9 @@ export default function MessageThread({
 }) {
   const [openLedgerIndex, setOpenLedgerIndex] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [viewModes, setViewModes] = useState({}); // idx -> "table" | "chart" | "both"
+  const [speakingIndex, setSpeakingIndex] = useState(null);
+  const [hoveredCitation, setHoveredCitation] = useState(null);
 
   const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -59,6 +64,40 @@ export default function MessageThread({
 
   const toggleLedger = (idx) => {
     setOpenLedgerIndex(openLedgerIndex === idx ? null : idx);
+  };
+
+  const handleSetViewMode = (idx, mode) => {
+    setViewModes((prev) => ({ ...prev, [idx]: mode }));
+  };
+
+  const handleToggleSpeech = (text, idx) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    if (speakingIndex === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIndex(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    // Clean text for natural speech (remove markdown symbols, formulas, bracketed page numbers)
+    const cleanText = text
+      .replace(/\[\d+\]/g, "")
+      .replace(/[*_#`~]/g, "")
+      .replace(/\$([0-9,]+)\s*million/gi, "$1 million dollars")
+      .replace(/\(([^)]+)\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.onend = () => setSpeakingIndex(null);
+    utterance.onerror = () => setSpeakingIndex(null);
+
+    setSpeakingIndex(idx);
+    window.speechSynthesis.speak(utterance);
   };
 
   // Welcome Hero
@@ -183,59 +222,102 @@ export default function MessageThread({
                 )}
               </div>
 
-              {/* 2. Structured Comparison Table (if comparative or segmented query) */}
+              {/* 2. Structured Comparison Table & Visual Financial Chart */}
               {item.comparison_table && (
-                <div className="comparison-table-container">
-                  <div className="comparison-table-header-block">
-                    <div className="comparison-title-row">
-                      <span className="comparison-table-title">{item.comparison_table.title}</span>
-                      <span className="comparison-source-pill">
-                        Source Filing: {item.comparison_table.source_filing || (item.company ? `${item.company} Form 10-K` : "SEC Form 10-K")}
-                      </span>
+                <div className="comparison-section-container">
+                  {/* View Mode Bar: Table | Chart | Both */}
+                  <div className="table-chart-toggle-bar">
+                    <span className="subview-section-label">
+                      📈 Comparative Disclosures
+                    </span>
+                    <div className="subview-pills-group">
+                      <button
+                        type="button"
+                        className={`btn-subview-pill ${(viewModes[idx] || "table") === "table" ? "active" : ""}`}
+                        onClick={() => handleSetViewMode(idx, "table")}
+                      >
+                        📋 Table
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-subview-pill ${viewModes[idx] === "chart" ? "active" : ""}`}
+                        onClick={() => handleSetViewMode(idx, "chart")}
+                      >
+                        📊 Visual Chart
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-subview-pill ${viewModes[idx] === "both" ? "active" : ""}`}
+                        onClick={() => handleSetViewMode(idx, "both")}
+                      >
+                        🗂 Both
+                      </button>
                     </div>
-                    <p className="comparison-explicit-note">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="16" x2="12" y2="12" />
-                        <line x1="12" y1="8" x2="12.01" y2="8" />
-                      </svg>
-                      <span>
-                        {item.comparison_table.source_note || "Both current and comparative prior-year figures are disclosed within the single Form 10-K filing. Comparisons do not require uploading two separate reports."}
-                      </span>
-                    </p>
                   </div>
 
-                  <div className="table-scroll-wrapper">
-                    <table className="comparison-data-table">
-                      <thead>
-                        <tr>
-                          {item.comparison_table.columns.map((col, cIdx) => (
-                            <th key={cIdx} className={cIdx >= 1 && cIdx <= 4 ? "text-right" : "text-left"}>
-                              {col}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {item.comparison_table.rows.map((row, rIdx) => (
-                          <tr key={rIdx} className={row.highlight ? "row-highlight" : ""}>
-                            <td className="cell-metric font-semibold">{row.metric}</td>
-                            <td className="cell-num font-mono text-right">{row.prior_period}</td>
-                            <td className="cell-num font-mono text-right font-bold">{row.current_period}</td>
-                            <td className="cell-num font-mono text-right">
-                              <span className={`delta-badge ${row.variance_dollar?.startsWith("+") ? "delta-pos" : row.variance_dollar?.startsWith("-") ? "delta-neg" : "delta-neutral"}`}>
-                                {row.variance_dollar}
-                              </span>
-                            </td>
-                            <td className="cell-num font-mono text-right font-semibold">{row.variance_pct}</td>
-                            <td className="cell-source text-left">
-                              {row.source}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  {/* Comparison Data Table */}
+                  {((viewModes[idx] || "table") === "table" || viewModes[idx] === "both") && (
+                    <div className="comparison-table-container">
+                      <div className="comparison-table-header-block">
+                        <div className="comparison-title-row">
+                          <span className="comparison-table-title">{item.comparison_table.title}</span>
+                          <span className="comparison-source-pill">
+                            Source Filing: {item.comparison_table.source_filing || (item.company ? `${item.company} Form 10-K` : "SEC Form 10-K")}
+                          </span>
+                        </div>
+                        <p className="comparison-explicit-note">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="16" x2="12" y2="12" />
+                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                          </svg>
+                          <span>
+                            {item.comparison_table.source_note || "Both current and comparative prior-year figures are disclosed within the single Form 10-K filing. Comparisons do not require uploading two separate reports."}
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="table-scroll-wrapper">
+                        <table className="comparison-data-table">
+                          <thead>
+                            <tr>
+                              {item.comparison_table.columns.map((col, cIdx) => (
+                                <th key={cIdx} className={cIdx >= 1 && cIdx <= 4 ? "text-right" : "text-left"}>
+                                  {col}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {item.comparison_table.rows.map((row, rIdx) => (
+                              <tr key={rIdx} className={row.highlight ? "row-highlight" : ""}>
+                                <td className="cell-metric font-semibold">{row.metric}</td>
+                                <td className="cell-num font-mono text-right">{row.prior_period}</td>
+                                <td className="cell-num font-mono text-right font-bold">{row.current_period}</td>
+                                <td className="cell-num font-mono text-right">
+                                  <span className={`delta-badge ${row.variance_dollar?.startsWith("+") ? "delta-pos" : row.variance_dollar?.startsWith("-") ? "delta-neg" : "delta-neutral"}`}>
+                                    {row.variance_dollar}
+                                  </span>
+                                </td>
+                                <td className="cell-num font-mono text-right font-semibold">{row.variance_pct}</td>
+                                <td className="cell-source text-left">
+                                  {row.source}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive Financial Chart */}
+                  {(viewModes[idx] === "chart" || viewModes[idx] === "both") && (
+                    <FinancialChart
+                      comparisonTable={item.comparison_table}
+                      company={item.company}
+                    />
+                  )}
                 </div>
               )}
 
@@ -331,21 +413,49 @@ export default function MessageThread({
                     <span>Supporting SEC 10-K Pages ({item.citations.length} Citations):</span>
                   </div>
                   <div className="citations-chips-group">
-                    {item.citations.map((cite, cIdx) => (
-                      <button
-                        key={cIdx}
-                        type="button"
-                        className="citation-interactive-pill"
-                        onClick={() => onInspectCitation(cite)}
-                        title={`Click to open Page ${cite.printed_page} excerpt and official SEC filing`}
-                      >
-                        <span className="cite-page-badge">Page {cite.printed_page}</span>
-                        <span className="cite-section-label">
-                          {cite.section?.split("-")[0]?.trim() || "Financial Statements"}
-                        </span>
-                        <span className="cite-open-icon">↗</span>
-                      </button>
-                    ))}
+                    {item.citations.map((cite, cIdx) => {
+                      const citeKey = `${idx}-${cIdx}`;
+                      const isHovered = hoveredCitation === citeKey;
+                      return (
+                        <div
+                          key={cIdx}
+                          className="citation-pill-wrapper"
+                          onMouseEnter={() => setHoveredCitation(citeKey)}
+                          onMouseLeave={() => setHoveredCitation(null)}
+                        >
+                          <button
+                            type="button"
+                            className="citation-interactive-pill"
+                            onClick={() => onInspectCitation(cite)}
+                            title={`Click to open Page ${cite.printed_page} excerpt and official SEC filing`}
+                          >
+                            <span className="cite-page-badge">Page {cite.printed_page}</span>
+                            <span className="cite-section-label">
+                              {cite.section?.split("-")[0]?.trim() || "Financial Statements"}
+                            </span>
+                            <span className="cite-open-icon">↗</span>
+                          </button>
+
+                          {/* Instant Hover Quick-Peek Popover */}
+                          {isHovered && (
+                            <div className="citation-hover-popover" role="tooltip">
+                              <div className="popover-header">
+                                <span className="popover-badge">SEC Verified Excerpt</span>
+                                <span className="popover-page">Page {cite.printed_page}</span>
+                              </div>
+                              <div className="popover-quote">
+                                {cite.exact_quote ? `“${cite.exact_quote}”` : "Official SEC filing statement disclosure."}
+                              </div>
+                              {cite.section && (
+                                <div className="popover-footer">
+                                  <span>📁 {cite.section}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -365,6 +475,48 @@ export default function MessageThread({
                     </svg>
                     <span>{copiedId === idx ? "Copied" : "Copy"}</span>
                   </button>
+
+                  {/* Audio Executive Briefing */}
+                  <button
+                    type="button"
+                    className={`btn-tool-action ${speakingIndex === idx ? "speaking" : ""}`}
+                    onClick={() => handleToggleSpeech(item.answer_text, idx)}
+                    title={speakingIndex === idx ? "Stop Executive Briefing" : "Listen to Executive Briefing"}
+                  >
+                    {speakingIndex === idx ? (
+                      <>
+                        <span className="audio-wave-anim">
+                          <span /><span /><span />
+                        </span>
+                        <span>Stop Audio</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                        </svg>
+                        <span>Listen Briefing</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Audit-grade Excel export with live formulas */}
+                  {item.comparison_table?.rows?.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-tool-action btn-excel-action"
+                      onClick={() => exportFinancialModelToExcel(item)}
+                      title="Download audit-grade financial spreadsheet with live Excel formulas"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="21" x2="9" y2="9" />
+                      </svg>
+                      <span>Excel Model (.xls)</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
