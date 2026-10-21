@@ -14,6 +14,7 @@ from app.schemas import (
     AnswerStatus,
 )
 from app.main import app
+from app.core.security import AuthenticatedUser, get_current_user
 
 
 # Ensure project root is in sys.path
@@ -25,6 +26,16 @@ if str(PROJECT_ROOT) not in sys.path:
 class TestAccessAndContracts:
     def setup_method(self):
         self.client = TestClient(app)
+        ## override auth dependency for offline test execution
+        app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+            user_id="test_user_id",
+            email="analyst@example.com",
+            role="authenticated",
+            claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
+        )
+    
+    def teardown_method(self):
+        app.dependency_overrides.clear()
 
 
     # 1. SCHEMA CONTRACT VALIDATIONS
@@ -51,7 +62,6 @@ class TestAccessAndContracts:
         assert req.company == "Apple Inc."
 
     def test_answer_status_enum_values(self):
-        """Verifies all 5 standard TRD § 6 answer statuses exist."""
         assert AnswerStatus.ANSWERED == "answered"
         assert AnswerStatus.PARTIAL == "partial"
         assert AnswerStatus.NEEDS_CLARIFICATION == "needs_clarification"
