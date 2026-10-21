@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import FinancialChart from "./FinancialChart";
-import { exportFinancialModelToExcel } from "../lib/exportExcel";
+import { exportFinancialModelToExcel } from "../../lib/exportExcel";
 
 const STARTER_PROMPTS = [
   {

@@ -3,16 +3,9 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase/browser";
-
-// Financial Analyst Roles
-const FINANCIAL_ROLES = [
-  "Equity Research",
-  "Investment Banking",
-  "Corporate Finance",
-  "Private Equity",
-  "Risk & Compliance",
-  "Individual Investor",
-];
+import { FINANCIAL_ROLES } from "../../lib/constants";
+import RoleChipSelector from "../../components/auth/RoleChipSelector";
+import PasswordStrengthMeter from "../../components/auth/PasswordStrengthMeter";
 
 // Helper: Extract Initials for Dynamic Avatar
 function getInitials(name) {
@@ -37,14 +30,6 @@ function EyeOffIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
       <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
-
-function CheckmarkIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
@@ -357,28 +342,11 @@ function LoginContent() {
               </div>
 
               {/* Interactive Financial Role Selector Chips */}
-              <div className="form-field-group">
-                <div className="form-label-row">
-                  <label className="form-label">Primary Financial Role</label>
-                  <span className="role-active-indicator">{selectedRole}</span>
-                </div>
-                <div className="role-chips-grid">
-                  {FINANCIAL_ROLES.map((role) => {
-                    const isSelected = selectedRole === role;
-                    return (
-                      <button
-                        key={role}
-                        type="button"
-                        className={`role-chip ${isSelected ? "selected" : ""}`}
-                        onClick={() => setSelectedRole(role)}
-                      >
-                        {isSelected && <span className="chip-check-icon"><CheckmarkIcon /></span>}
-                        <span>{role}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <RoleChipSelector
+                selectedRole={selectedRole}
+                onSelectRole={setSelectedRole}
+                roles={FINANCIAL_ROLES}
+              />
             </>
           )}
 
@@ -441,28 +409,10 @@ function LoginContent() {
 
             {/* Interactive Password Strength Meter (Sign-Up Only) */}
             {mode === "signup" && (
-              <div className="password-meter-box">
-                <div className="password-meter-bars">
-                  <div className={`meter-segment ${strength.score >= 1 ? `filled ${strength.colorClass}` : ""}`} />
-                  <div className={`meter-segment ${strength.score >= 2 ? `filled ${strength.colorClass}` : ""}`} />
-                  <div className={`meter-segment ${strength.score >= 3 ? `filled ${strength.colorClass}` : ""}`} />
-                  <div className={`meter-segment ${strength.score >= 4 ? `filled ${strength.colorClass}` : ""}`} />
-                </div>
-                <div className="password-criteria-badges">
-                  <span className={`criterion-pill ${passwordCriteria.minLength ? "met" : ""}`}>
-                    {passwordCriteria.minLength ? "✓" : "○"} 8+ chars
-                  </span>
-                  <span className={`criterion-pill ${passwordCriteria.hasUpper ? "met" : ""}`}>
-                    {passwordCriteria.hasUpper ? "✓" : "○"} Uppercase
-                  </span>
-                  <span className={`criterion-pill ${passwordCriteria.hasNumber ? "met" : ""}`}>
-                    {passwordCriteria.hasNumber ? "✓" : "○"} Number
-                  </span>
-                  <span className={`criterion-pill ${passwordCriteria.hasSpecial ? "met" : ""}`}>
-                    {passwordCriteria.hasSpecial ? "✓" : "○"} Symbol
-                  </span>
-                </div>
-              </div>
+              <PasswordStrengthMeter
+                strength={strength}
+                passwordCriteria={passwordCriteria}
+              />
             )}
           </div>
 

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Sidebar from "../components/Sidebar";
-import MessageThread from "../components/MessageThread";
-import ChatInput from "../components/ChatInput";
-import InspectorDrawer from "../components/InspectorDrawer";
-import UploadModal from "../components/UploadModal";
-import PdfViewerModal from "../components/PdfViewerModal";
-import CompareMatrixModal from "../components/CompareMatrixModal";
+import Sidebar from "../components/workspace/Sidebar";
+import MessageThread from "../components/workspace/MessageThread";
+import ChatInput from "../components/workspace/ChatInput";
+import InspectorDrawer from "../components/workspace/InspectorDrawer";
+import UploadModal from "../components/modals/UploadModal";
+import PdfViewerModal from "../components/modals/PdfViewerModal";
+import CompareMatrixModal from "../components/modals/CompareMatrixModal";
 import { createClient } from "../lib/supabase/browser";
 
 export default function Home() {

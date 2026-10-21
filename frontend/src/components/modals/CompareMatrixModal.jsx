@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { exportFinancialModelToExcel } from "../lib/exportExcel";
+import { exportFinancialModelToExcel } from "../../lib/exportExcel";
 
 const MATRIX_DATA = {
   FY2024: [
