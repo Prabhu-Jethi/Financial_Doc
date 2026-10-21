@@ -1,9 +1,9 @@
 import uuid
 import time
 from fastapi import APIRouter, Header, Depends
-from ..schemas import QueryRequest, QueryResponse
-from ..services.answering import AnswerService
-from ..integrations.auth import get_current_user, AuthenticatedUser
+from ...schemas import QueryRequest, QueryResponse
+from ...services.answering import AnswerService
+from ...core.security import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/query", tags=["Query"])
 

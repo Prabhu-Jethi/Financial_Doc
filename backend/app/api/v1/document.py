@@ -1,10 +1,10 @@
 import psycopg
 from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
-from ..config import settings
-from ..integrations.storage import SupabaseStorageService
-from ..integrations.auth import get_current_user, AuthenticatedUser
-from ..schemas import DocumentMetadataResponse
+from ...core.config import settings
+from ...integrations.storage import SupabaseStorageService
+from ...core.security import get_current_user, AuthenticatedUser
+from ...schemas import DocumentMetadataResponse
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 storage_service = SupabaseStorageService()

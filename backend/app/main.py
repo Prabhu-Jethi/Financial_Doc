@@ -3,9 +3,8 @@ import uvicorn
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .config import settings
-from .api.document import router as document_router
-from .api.query import router as query_router
+from .core.config import settings
+from .api.v1.router import api_router
 
 
 app = FastAPI(
@@ -21,8 +20,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.include_router(query_router, prefix="/api/v1")
-app.include_router(document_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/", tags=["Root"])
 def root():
