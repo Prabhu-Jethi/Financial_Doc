@@ -5,7 +5,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.documents import Document
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 
-from ..config import settings
+from ..core.config import settings
 from ..integrations.models import ModelService
 
 

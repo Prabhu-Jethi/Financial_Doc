@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pdfplumber
 import psycopg
-from ..config import settings
+from ..core.config import settings
 from ..integrations.models import ModelService
 
 
@@ -517,7 +517,7 @@ from decimal import Decimal
 
 import pdfplumber
 import psycopg
-from ..config import settings
+from ...core.config import settings
 from ..integrations.models import ModelService
 
 
