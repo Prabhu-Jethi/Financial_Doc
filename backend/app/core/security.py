@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 
-from ..config import settings
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +23,13 @@ JWKS_CACHE_TTL_SECONDS = 3600  # 1 hour cache
 class AuthenticatedUser:
     """Verified user identity extracted directly from cryptographic Supabase JWT claims."""
     user_id: str
-    email: Optional[str]
-    role: str
-    claims: Dict[str, Any]
+    email: Optional[str] = None
+    role: str = "authenticated"
+    claims: Optional[Dict[str, Any]] = None
+
+    def __post_init__(self):
+        if self.claims is None:
+            self.claims = {}
 
 
 def get_jwks_url() -> str:

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 import psycopg
-from ..config import settings
+from ..core.config import settings
 
 '''Native sql vector search using psycopg & pgvector'''
 class LangchainPostgresVector:

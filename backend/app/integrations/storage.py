@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Optional
 from supabase import create_client, Client
-from ..config import settings
+from ..core.config import settings
 
 '''Manages document storage operations in Supabase Storage. 
 Supports uploading original PDFs, downloading files, and generating
