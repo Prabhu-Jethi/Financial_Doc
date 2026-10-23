@@ -1,0 +1,70 @@
+name: CI Pipeline
+
+on:
+    push:
+        branches: [ main, master ]
+    pull_request:
+        branches: [ main, master ]
+    workflow_dispatch: # Allows manual trigger
+
+jobs:
+    ## Backend CI
+    backend-test:
+        name: Backend Test Suite (Python 3.12)
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: .
+        steps:
+          - name: Checkout Repository
+            uses: actions/checkout@v4
+
+          - name: Set up Python 3.12
+            uses: actions/setup-python@v5
+
+            with:
+                python-version: "3.12"
+                cache: "pip" # Caches pip downloads so runs stay under 1 minute
+
+          - name: Install Backend Dependencies
+            run: |
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
+
+          - name: Run Deterministic Unit Tests (52 Cases)
+            env:
+                # Dummy values so Settings() initializes without missing env crashes
+                DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+                SUPABASE_URL: "https://mock-supabase.supabase.co"
+                SUPABASE_SECRET_KEY: "mock-secret-key"
+                EXPLABS_API_KEY: "mock-explabs-key"
+            run: |
+                pytest backend/tests/unit/ -v --tb=short
+
+    ## Frontend CI
+    frontend-build:
+        name: Frontend Build Check (Next.js 14)
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: frontend
+        steps:
+          - name: Checkout Repository
+            uses: actions/checkout@v4
+
+          - name: Set up Node.js 20
+            uses: actions/setup-node@v4
+            with:
+                node-version: 20
+                cache: "npm"
+                cache-dependency-path: frontend/package-lock.json
+
+          - name: Install Frontend Dependencies
+            run: npm ci
+
+          - name: Verify Clean Next.js Production Build
+            env:
+                NEXT_PUBLIC_SUPABASE_URL: "https://mock-supabase.supabase.co"
+                NEXT_PUBLIC_SUPABASE_ANON_KEY: "mock-anon-key"
+                FASTAPI_BACKEND_URL: "http://localhost:8000"
+            run: npm run build
