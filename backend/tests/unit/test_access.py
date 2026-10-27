@@ -2,7 +2,8 @@
 Unit tests for API Contracts, Access, and Health Boundaries.
 Tests Pydantic models (QueryRequest, QueryResponse, AnswerStatus) and FastAPI endpoints.
 """
-
+import warnings
+warnings.filterwarnings('ignore')
 import sys
 from pathlib import Path
 import pytest
