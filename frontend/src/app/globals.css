@@ -4255,3 +4255,17 @@ body {
   border-color: #065f46;
   color: #6ee7b7;
 }
+
+
+/* Uploaded PDF Badge Styling */
+.mini-ticker-pill.ticker-upload {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+[data-theme="dark"] .mini-ticker-pill.ticker-upload {
+  background: rgba(37, 99, 235, 0.18);
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.35);
+}

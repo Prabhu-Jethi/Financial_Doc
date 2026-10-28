@@ -22,12 +22,29 @@ export default function Sidebar({
   theme = "light",
   onToggleTheme,
 }) {
-  const [documentsExpanded, setDocumentsExpanded] = useState(true);
+  const [secExpanded, setSecExpanded] = useState(true);
+  const [uploadedExpanded, setUploadedExpanded] = useState(true);
   const [activeCompanyFilter, setActiveCompanyFilter] = useState("All");
 
   const companies = ["All", "AAPL", "AMZN", "MSFT", "META"];
 
-  const filteredDocs = documents.filter((doc) => {
+  // Separate SEC 10-K Filings from User-Uploaded General Documents
+  const secDocs = documents.filter(
+    (d) =>
+      (d.report_type === "10-K" || (d.ticker && ["AAPL", "AMZN", "MSFT", "META"].includes(d.ticker))) &&
+      !d.isCustom &&
+      d.report_type !== "general"
+  );
+
+  const uploadedDocs = documents.filter(
+    (d) =>
+      d.report_type === "general" ||
+      d.ticker === "DOC" ||
+      d.isCustom ||
+      d.document_id?.startsWith("doc_")
+  );
+
+  const filteredSecDocs = secDocs.filter((doc) => {
     if (activeCompanyFilter === "All") return true;
     return doc.ticker === activeCompanyFilter || (doc.company && doc.company.toUpperCase().includes(activeCompanyFilter));
   });
@@ -47,7 +64,7 @@ export default function Sidebar({
           </div>
           <div>
             <span className="brand-name">DocIntel</span>
-            <span className="brand-tag">SEC 10-K</span>
+            <span className="brand-tag">Multi-Tenant</span>
           </div>
         </div>
 
@@ -103,12 +120,12 @@ export default function Sidebar({
         )}
 
         {/* =========================================================================
-            COLLAPSIBLE DOCUMENT CONTAINER (Accordion)
+            1. CURATED SEC 10-K FILINGS ACCORDION
            ========================================================================= */}
-        <div className="documents-accordion-container">
+        <div className="documents-accordion-container" style={{ marginBottom: "0.6rem" }}>
           <div
             className="accordion-header"
-            onClick={() => setDocumentsExpanded(!documentsExpanded)}
+            onClick={() => setSecExpanded(!secExpanded)}
             title="Toggle SEC Filings Container"
           >
             <div className="accordion-title-group">
@@ -119,7 +136,7 @@ export default function Sidebar({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.5"
-                className={`accordion-chevron ${documentsExpanded ? "expanded" : ""}`}
+                className={`accordion-chevron ${secExpanded ? "expanded" : ""}`}
               >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
@@ -127,39 +144,13 @@ export default function Sidebar({
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
               <span>SEC 10-K Filings</span>
-              <span className="doc-count-badge">{documents.length}</span>
+              <span className="doc-count-badge">{secDocs.length}</span>
             </div>
-
-            <button
-              type="button"
-              className="btn-accordion-quick-upload"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenUpload();
-              }}
-              title="Upload new filing"
-            >
-              + Upload
-            </button>
           </div>
 
           {/* Accordion Content */}
-          {documentsExpanded && (
+          {secExpanded && (
             <div className="accordion-content">
-              {/* Minimalist Upload Pill */}
-              <div
-                className="compact-upload-pill"
-                onClick={onOpenUpload}
-                title="Upload or drop SEC Form 10-K filing PDF"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                <span>Upload New 10-K PDF</span>
-              </div>
-
               {/* Company Filter Chips */}
               <div className="company-filter-bar">
                 {companies.map((co) => (
@@ -176,7 +167,7 @@ export default function Sidebar({
 
               {/* Compact Document Rows */}
               <div className="compact-doc-list">
-                {filteredDocs.map((doc) => {
+                {filteredSecDocs.map((doc) => {
                   const isSelected = selectedDocIds.includes(doc.document_id);
                   const ticker = doc.ticker || "SEC";
                   const year = doc.report_fiscal_year || "2024";
@@ -229,6 +220,132 @@ export default function Sidebar({
                   );
                 })}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* =========================================================================
+            2. MY UPLOADED DOCUMENTS ACCORDION
+           ========================================================================= */}
+        <div className="documents-accordion-container" style={{ marginBottom: "0.6rem" }}>
+          <div
+            className="accordion-header"
+            onClick={() => setUploadedExpanded(!uploadedExpanded)}
+            title="Toggle Uploaded Documents Container"
+          >
+            <div className="accordion-title-group">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                className={`accordion-chevron ${uploadedExpanded ? "expanded" : ""}`}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--c-charcoal)" }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <polyline points="9 15 12 12 15 15" />
+              </svg>
+              <span>Uploaded Documents</span>
+              <span className="doc-count-badge">{uploadedDocs.length}</span>
+            </div>
+
+            <button
+              type="button"
+              className="btn-accordion-quick-upload"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenUpload();
+              }}
+              title="Upload PDF document"
+            >
+              + Upload
+            </button>
+          </div>
+
+          {/* Accordion Content */}
+          {uploadedExpanded && (
+            <div className="accordion-content">
+              {/* Minimalist Upload Pill */}
+              <div
+                className="compact-upload-pill"
+                onClick={onOpenUpload}
+                title="Upload PDF (contracts, invoices, research papers)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>Upload General PDF</span>
+              </div>
+
+              {/* Uploaded Documents List */}
+              {uploadedDocs.length === 0 ? (
+                <div className="history-empty-state" style={{ padding: "0.5rem 0.25rem", textAlign: "center" }}>
+                  <span>No uploaded documents yet. Upload a PDF contract, invoice, or note to parse.</span>
+                </div>
+              ) : (
+                <div className="compact-doc-list">
+                  {uploadedDocs.map((doc) => {
+                    const isSelected = selectedDocIds.includes(doc.document_id);
+                    const docName = doc.file_name || doc.company || doc.document_id;
+                    const pageText = doc.page_count ? `${doc.page_count}p` : "PDF";
+
+                    return (
+                      <div
+                        key={doc.document_id}
+                        className={`compact-doc-row ${isSelected ? "selected" : ""}`}
+                        onClick={() => onToggleDocSelection(doc.document_id)}
+                        title={`${docName} — Click to toggle selection`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="doc-mini-checkbox"
+                          checked={isSelected}
+                          onChange={() => onToggleDocSelection(doc.document_id)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Select ${docName}`}
+                        />
+
+                        <span className="mini-ticker-pill ticker-upload">
+                          PDF
+                        </span>
+
+                        <div className="compact-doc-label">
+                          <span className="doc-main-name" title={docName}>
+                            {docName}
+                          </span>
+                          <span className="doc-year-tag">{pageText}</span>
+                        </div>
+
+                        {/* PDF Preview Icon Button */}
+                        {onPreviewDocument && (
+                          <button
+                            type="button"
+                            className="btn-preview-pdf"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPreviewDocument(doc);
+                            }}
+                            title="Open uploaded PDF in viewer"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -329,7 +446,7 @@ export default function Sidebar({
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
         )}
-        <span className="version-pill">v1.3</span>
+        <span className="version-pill">v1.4</span>
       </div>
     </aside>
   );
