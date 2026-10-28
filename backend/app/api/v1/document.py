@@ -118,15 +118,22 @@ async def upload_document(file: UploadFile = File(...),
                         (
                             chk.chunk_id,
                             doc_id,
-                            f"{doc_id}_p(chk.page_number)",
+                            f"{doc_id}_p{chk.page_number}",
                             None,
                             db_chunk_type,
                             chk.content,
                             vec_str,
-                            json.dump(meta)
+                            json.dumps(meta)
                         )
                     )
                 conn.commit()
+
+        # Upload original PDF to Supabase storage for provenance viewing
+        try:
+            storage_service.upload_document(temp_file_path, remote_filename=file.filename)
+        except Exception as e:
+            print(f"[Storage] Note: Storage upload: {e}")
+
         return {
             "document_id": doc_id,
             "file_name": file.filename,
