@@ -160,24 +160,26 @@ export default function Home() {
     abortControllerRef.current = new AbortController();
 
     try {
-      // 1. Resolve company context dynamically from question or selected document
+      // 1. Resolve company context dynamically from selected document or question
       let queryCompany = "All";
       let queryDocId = undefined;
 
-      const qLower = q.toLowerCase();
-      if (qLower.includes("microsoft") || qLower.includes("msft")) {
-        queryCompany = "Microsoft Corporation";
-      } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
-        queryCompany = "Amazon.com, Inc.";
-      } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
-        queryCompany = "Meta Platforms, Inc.";
-      } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
-        queryCompany = "Apple Inc.";
-      } else if (selectedDocIds.length === 1) {
+      if (selectedDocIds.length === 1) {
         const selectedDoc = documents.find((d) => d.document_id === selectedDocIds[0]);
         if (selectedDoc) {
           queryCompany = selectedDoc.company || "All";
           queryDocId = selectedDoc.document_id;
+        }
+      } else {
+        const qLower = q.toLowerCase();
+        if (qLower.includes("microsoft") || qLower.includes("msft")) {
+          queryCompany = "Microsoft Corporation";
+        } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
+          queryCompany = "Amazon.com, Inc.";
+        } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
+          queryCompany = "Meta Platforms, Inc.";
+        } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
+          queryCompany = "Apple Inc.";
         }
       }
 
