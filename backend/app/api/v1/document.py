@@ -109,6 +109,8 @@ async def upload_document(file: UploadFile = File(...),
                     meta = {
                         **chk.metadata,
                         "user_id": user.user_id,
+                        "document_id": doc_id,
+                        "printed_page": str(chk.page_number),
                         "page_number": chk.page_number,
                         "doc_type": doc_type,
                         "file_name": file.filename
