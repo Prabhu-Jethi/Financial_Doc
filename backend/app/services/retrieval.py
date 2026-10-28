@@ -37,7 +37,7 @@ class FinancialRetriever(BaseRetriever):
     def _build_where_filters(self, query: str) -> tuple[List[str], List[Any]]:
         ## Reusable SQL where clauses for corpus status, company and year
         where_clauses = [
-            "corpus_version IN (SELECT version_id FROM corpus_versions WHERE status = 'ready')"
+            "(corpus_version IN (SELECT version_id FROM corpus_versions WHERE status = 'ready') OR corpus_version IS NULL)"
         ]
         params: List[Any] = []
 
