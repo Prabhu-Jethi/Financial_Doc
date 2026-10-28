@@ -79,8 +79,12 @@ export default function PdfViewerModal({
               </svg>
             </div>
             <div>
-              <div className="pdf-modal-company">{company} • FY{year} Form 10-K</div>
-              <div className="pdf-modal-subtitle">{docId} — {section}</div>
+              <div className="pdf-modal-company">
+                {company} • {activeDoc?.report_type === "general" || docId?.startsWith("doc_") ? "Uploaded Document" : `FY${year} Form 10-K`}
+              </div>
+              <div className="pdf-modal-subtitle">
+                {docId} — {section || "Document Content"}
+              </div>
             </div>
           </div>
 
