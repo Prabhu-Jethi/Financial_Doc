@@ -97,6 +97,23 @@ async def upload_document(file: UploadFile = File(...),
                         "ready"
                     )   
                 )
+                page_query = """
+                INSERT INTO pages (
+                    page_id, document_id, physical_page_index, printed_page, raw_text
+                ) VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (document_id, physical_page_index) DO NOTHING;
+                """
+                distinct_pages = set(range(1, parsed_doc.total_pages + 1))
+                for chk in parsed_doc.chunks:
+                    if chk.page_number:
+                        distinct_pages.add(chk.page_number)
+
+                for p_num in sorted(distinct_pages):
+                    cur.execute(
+                        page_query,
+                        (f"{doc_id}_p{p_num}", doc_id, p_num, str(p_num), "")
+                    )
+
                 chunk_query = """
                 INSERT INTO chunks (
                     chunk_id, document_id, page_id, table_id, chunk_type, content, embedding, metadata
@@ -120,7 +137,7 @@ async def upload_document(file: UploadFile = File(...),
                         (
                             chk.chunk_id,
                             doc_id,
-                            f"{doc_id}_p{chk.page_number}",
+                            f"{doc_id}_p{chk.page_number}" if chk.page_number else None,
                             None,
                             db_chunk_type,
                             chk.content,
