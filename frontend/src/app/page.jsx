@@ -140,8 +140,9 @@ export default function Home() {
   };
 
   const handleDocumentUploaded = (newDoc) => {
-    setDocuments((prev) => [newDoc, ...prev]);
-    setSelectedDocIds((prev) => [newDoc.document_id, ...prev]);
+    setDocuments((prev) => [newDoc, ...prev.filter((d) => d.document_id !== newDoc.document_id)]);
+    setSelectedDocIds([newDoc.document_id]);
+    fetchDocuments();
   };
 
   const handleToggleDocSelection = (docId) => {
