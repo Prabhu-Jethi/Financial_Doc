@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { fetchDocumentPdfUrl } from "../../../../../lib/server/api.js";
 
 export const dynamic = "force-dynamic";
 
@@ -67,32 +68,49 @@ export async function GET(request, context) {
           : lowerId.includes("2022")
           ? "MSFT_FY22Q4_10K.pdf"
           : "MSFT_FY24Q4_10K.pdf";
-      } else {
-        fileName = "10-Q4-2024-As-Filed.pdf";
       }
     }
 
-    // Resolve file from data/originals/
-    const filePath = path.resolve(process.cwd(), "..", "data", "originals", fileName);
-
-    if (!fs.existsSync(filePath)) {
-      return new NextResponse(`PDF filing not found on disk: ${fileName}`, { status: 404 });
+    // 1. Check local data/originals/ disk directory
+    if (fileName) {
+      const filePath = path.resolve(process.cwd(), "..", "data", "originals", fileName);
+      if (fs.existsSync(filePath)) {
+        const fileBuffer = fs.readFileSync(filePath);
+        return new NextResponse(fileBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="${fileName}"`,
+            "Content-Length": fileBuffer.length.toString(),
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=86400",
+          },
+        });
+      }
     }
 
-    const fileBuffer = fs.readFileSync(filePath);
+    // 2. Resolve uploaded or cloud document via FastAPI pre-signed URL
+    const pdfMeta = await fetchDocumentPdfUrl(rawId);
+    if (pdfMeta && pdfMeta.signed_url) {
+      const remoteRes = await fetch(pdfMeta.signed_url);
+      if (remoteRes.ok) {
+        const fileBuffer = Buffer.from(await remoteRes.arrayBuffer());
+        const resolvedName = pdfMeta.file_name || fileName || `${rawId}.pdf`;
+        return new NextResponse(fileBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="${resolvedName}"`,
+            "Content-Length": fileBuffer.length.toString(),
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600",
+          },
+        });
+      }
+    }
 
-    return new NextResponse(fileBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${fileName}"`,
-        "Content-Length": fileBuffer.length.toString(),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=86400",
-      },
-    });
+    return new NextResponse(`PDF document not found: ${rawId}`, { status: 404 });
   } catch (err) {
     return new NextResponse(`Error reading PDF filing: ${err.message}`, { status: 500 });
   }
 }
-

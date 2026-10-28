@@ -151,3 +151,85 @@ export async function fetchDocumentMetadata() {
 
   return CORPUS_DOCUMENTS;
 }
+
+
+/**
+ * Uploads a document to FastAPI pipeline for ingestion.
+ * Forwards caller's verified Supabase JWT Bearer token.
+ */
+export async function uploadDocumentToFastAPI(formData) {
+  let token = null;
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    token = session?.access_token || null;
+  } catch (authErr) {
+    // Session token absent
+  }
+
+  const headers = {
+    Accept: "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/documents/upload`, {
+    method: "POST",
+    headers,
+    body: formData,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ detail: res.statusText }));
+    const errorMsg = errData.detail || errData.message || `Upload failed with HTTP ${res.status}`;
+    const error = new Error(errorMsg);
+    error.status = res.status;
+    throw error;
+  }
+
+  return await res.json();
+}
+
+/**
+ * Requests temporary pre-signed PDF URL for a document from FastAPI.
+ */
+export async function fetchDocumentPdfUrl(documentId) {
+  let token = null;
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    token = session?.access_token || null;
+  } catch (authErr) {
+    // Session token absent
+  }
+
+  const headers = {
+    Accept: "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/documents/${encodeURIComponent(documentId)}/pdf_url`, {
+      headers,
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    // quiet fallback
+  }
+
+  return null;
+}
