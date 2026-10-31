@@ -9,11 +9,48 @@ export default function SettingsModal({
   onToggleTheme,
   activeEngine = "fastapi_live",
   onClearThread,
+  settings = {},
+  onSaveSettings,
 }) {
   const [activeTab, setActiveTab] = useState("general");
-  const [retrievalMode, setRetrievalMode] = useState("hybrid");
-  const [topK, setTopK] = useState(7);
-  const [showCitationScore, setShowCitationScore] = useState(true);
+  const [retrievalMode, setRetrievalMode] = useState(settings?.retrievalMode || "hybrid");
+  const [topK, setTopK] = useState(settings?.topK || 7);
+  const [showCitationScore, setShowCitationScore] = useState(
+    typeof settings?.showCitationScore === "boolean" ? settings.showCitationScore : true
+  );
+
+  // Sync saved settings from localStorage or props on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("docintel_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.retrievalMode) setRetrievalMode(parsed.retrievalMode);
+        if (parsed.topK) setTopK(parsed.topK);
+        if (typeof parsed.showCitationScore === "boolean") setShowCitationScore(parsed.showCitationScore);
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  }, []);
+
+  const handleUpdate = (updatedFields) => {
+    try {
+      const current = JSON.parse(localStorage.getItem("docintel_settings") || "{}");
+      const nextSettings = { ...current, ...updatedFields };
+      localStorage.setItem("docintel_settings", JSON.stringify(nextSettings));
+      if (onSaveSettings) {
+        onSaveSettings(nextSettings);
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  };
+
+  const handleSaveAndClose = () => {
+    handleUpdate({ retrievalMode, topK, showCitationScore });
+    onClose();
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -228,7 +265,10 @@ export default function SettingsModal({
                       key={val}
                       type="button"
                       className={`top-k-pill ${topK === val ? "active" : ""}`}
-                      onClick={() => setTopK(val)}
+                      onClick={() => {
+                        setTopK(val);
+                        handleUpdate({ topK: val });
+                      }}
                     >
                       {val} Chunks {val === 7 && "(Default)"}
                     </button>
@@ -248,7 +288,11 @@ export default function SettingsModal({
                     type="checkbox"
                     className="settings-switch"
                     checked={showCitationScore}
-                    onChange={(e) => setShowCitationScore(e.target.checked)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setShowCitationScore(checked);
+                      handleUpdate({ showCitationScore: checked });
+                    }}
                   />
                 </div>
               </div>
@@ -329,7 +373,7 @@ export default function SettingsModal({
           <button
             type="button"
             className="btn-modal-primary"
-            onClick={onClose}
+            onClick={handleSaveAndClose}
           >
             Save &amp; Close
           </button>
