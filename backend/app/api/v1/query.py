@@ -7,7 +7,15 @@ from ...core.security import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/query", tags=["Query"])
 
-answering_service = AnswerService()
+_answering_service = None
+
+
+def get_answering_service() -> AnswerService:
+    """Lazy-initializes AnswerService on first query to prevent blocking ASGI startup."""
+    global _answering_service
+    if _answering_service is None:
+        _answering_service = AnswerService()
+    return _answering_service
 
 
 @router.post("", response_model=QueryResponse)
@@ -24,8 +32,9 @@ def execute_query(
     start_time = time.time()
     req_id = x_request_id or f"req_{uuid.uuid4().hex[:8]}"
 
-    # Execute audited answering pipeline
-    result = answering_service.answer_query(
+    # Execute audited answering pipeline via lazy-initialized service
+    answering_svc = get_answering_service()
+    result = answering_svc.answer_query(
         question=req.question,
         company=req.company,
         document_id=req.document_id
@@ -47,3 +56,4 @@ def execute_query(
         missing_information=result.get("missing_information", []),
         timings_ms={"total": round(elapsed_ms, 2)}
     )
+
