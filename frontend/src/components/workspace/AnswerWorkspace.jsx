@@ -23,7 +23,7 @@ export default function AnswerWorkspace({
   const getStatusBadge = (status) => {
     switch (status) {
       case "answered":
-        return <span className="status-badge-main badge-answered">✓ Disclosed & Verified</span>;
+        return <span className="status-badge-main badge-answered">✓ Disclosed &amp; Verified</span>;
       case "partial":
         return <span className="status-badge-main badge-partial">⚠ Partial Evidence</span>;
       case "needs_clarification":

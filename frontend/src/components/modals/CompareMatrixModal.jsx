@@ -293,7 +293,6 @@ export default function CompareMatrixModal({
                 <th className="text-right">Operating Income</th>
                 <th className="text-right">R&amp;D Expense</th>
                 <th className="text-left">Core Segment</th>
-                <th className="text-center">SEC 10-K</th>
               </tr>
             </thead>
             <tbody>
@@ -327,17 +326,6 @@ export default function CompareMatrixModal({
                     <td className="cell-num text-right">{c.operatingIncome}</td>
                     <td className="cell-num text-right">{c.rdExpense}</td>
                     <td className="cell-source text-left">{c.keySegment}</td>
-                    <td className="text-center">
-                      <a
-                        href={c.secUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="sec-link-mini"
-                        title={`Open official SEC Form 10-K for ${c.company}`}
-                      >
-                        10-K ↗
-                      </a>
-                    </td>
                   </tr>
                 );
               })}

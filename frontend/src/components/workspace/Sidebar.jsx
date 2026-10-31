@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Sidebar({
   isOpen,
@@ -8,8 +8,8 @@ export default function Sidebar({
   documents = [],
   selectedDocIds = [],
   onToggleDocSelection,
-  onSelectAllDocs,
-  onClearAllDocs,
+  onSelectDocs,
+  onDeselectDocs,
   onOpenUpload,
   onPreviewDocument,
   history = [],
@@ -21,12 +21,38 @@ export default function Sidebar({
   activeEngine,
   theme = "light",
   onToggleTheme,
+  onOpenProfile,
+  onOpenSettings,
+  onOpenHelp,
 }) {
   const [secExpanded, setSecExpanded] = useState(true);
   const [uploadedExpanded, setUploadedExpanded] = useState(true);
   const [activeCompanyFilter, setActiveCompanyFilter] = useState("All");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
   const companies = ["All", "AAPL", "AMZN", "MSFT", "META"];
+
+  // Click-outside listener for the ChatGPT-style bottom user popover
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
+  const handleAutoCloseMobile = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 900 && onClose) {
+      onClose();
+    }
+  };
 
   // Separate SEC 10-K Filings from User-Uploaded General Documents
   const secDocs = documents.filter(
@@ -48,6 +74,73 @@ export default function Sidebar({
     if (activeCompanyFilter === "All") return true;
     return doc.ticker === activeCompanyFilter || (doc.company && doc.company.toUpperCase().includes(activeCompanyFilter));
   });
+
+  const selectedSecInFilter = filteredSecDocs.filter((d) => selectedDocIds.includes(d.document_id));
+  const selectedUploadCount = uploadedDocs.filter((d) => selectedDocIds.includes(d.document_id)).length;
+
+  const handleSelectAllSec = (e) => {
+    e.stopPropagation();
+    const ids = filteredSecDocs.map((d) => d.document_id);
+    if (onSelectDocs) {
+      onSelectDocs(ids);
+    } else {
+      ids.forEach((id) => {
+        if (!selectedDocIds.includes(id)) onToggleDocSelection(id);
+      });
+    }
+  };
+
+  const handleDeselectAllSec = (e) => {
+    e.stopPropagation();
+    const ids = filteredSecDocs.map((d) => d.document_id);
+    if (onDeselectDocs) {
+      onDeselectDocs(ids);
+    } else {
+      ids.forEach((id) => {
+        if (selectedDocIds.includes(id)) onToggleDocSelection(id);
+      });
+    }
+  };
+
+  const handleSelectAllUploads = (e) => {
+    e.stopPropagation();
+    const ids = uploadedDocs.map((d) => d.document_id);
+    if (onSelectDocs) {
+      onSelectDocs(ids);
+    } else {
+      ids.forEach((id) => {
+        if (!selectedDocIds.includes(id)) onToggleDocSelection(id);
+      });
+    }
+  };
+
+  const handleDeselectAllUploads = (e) => {
+    e.stopPropagation();
+    const ids = uploadedDocs.map((d) => d.document_id);
+    if (onDeselectDocs) {
+      onDeselectDocs(ids);
+    } else {
+      ids.forEach((id) => {
+        if (selectedDocIds.includes(id)) onToggleDocSelection(id);
+      });
+    }
+  };
+
+  const userFullName =
+    currentUser?.user_metadata?.full_name ||
+    currentUser?.email?.split("@")[0] ||
+    "Donald Trump";
+
+  const userInitials = userFullName
+    ? userFullName
+        .split(/\s+/)
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "DT";
+
+  const userRole = currentUser?.user_metadata?.role || "Pro Analyst";
 
   return (
     <aside className={`webapp-sidebar ${isOpen ? "open" : ""}`} aria-label="Application Sidebar">
@@ -91,7 +184,10 @@ export default function Sidebar({
         <button
           type="button"
           className="btn-new-query"
-          onClick={onNewSession}
+          onClick={() => {
+            onNewSession();
+            handleAutoCloseMobile();
+          }}
           title="Start a new analysis thread"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -106,7 +202,10 @@ export default function Sidebar({
           <button
             type="button"
             className="btn-compare-launcher"
-            onClick={onOpenCompare}
+            onClick={() => {
+              onOpenCompare();
+              handleAutoCloseMobile();
+            }}
             title="Open 4-Company Benchmark Scorecard (AAPL, MSFT, AMZN, META)"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -122,7 +221,7 @@ export default function Sidebar({
         {/* =========================================================================
             1. CURATED SEC 10-K FILINGS ACCORDION
            ========================================================================= */}
-        <div className="documents-accordion-container" style={{ marginBottom: "0.6rem" }}>
+        <div className="documents-accordion-container">
           <div
             className="accordion-header"
             onClick={() => setSecExpanded(!secExpanded)}
@@ -163,6 +262,32 @@ export default function Sidebar({
                     {co}
                   </button>
                 ))}
+              </div>
+
+              {/* Check & Uncheck All Helper Bar */}
+              <div className="doc-section-actions-bar">
+                <span className="doc-selection-summary">
+                  {selectedSecInFilter.length} / {filteredSecDocs.length} selected
+                </span>
+                <div className="doc-selection-btn-group">
+                  <button
+                    type="button"
+                    className="btn-select-action"
+                    onClick={handleSelectAllSec}
+                    title="Check all visible SEC filings"
+                  >
+                    Select All
+                  </button>
+                  <span className="action-dot-divider">•</span>
+                  <button
+                    type="button"
+                    className="btn-select-action"
+                    onClick={handleDeselectAllSec}
+                    title="Uncheck all visible SEC filings"
+                  >
+                    Uncheck All
+                  </button>
+                </div>
               </div>
 
               {/* Compact Document Rows */}
@@ -207,6 +332,7 @@ export default function Sidebar({
                           onClick={(e) => {
                             e.stopPropagation();
                             onPreviewDocument(doc);
+                            handleAutoCloseMobile();
                           }}
                           title="Open original filing PDF"
                         >
@@ -227,13 +353,13 @@ export default function Sidebar({
         {/* =========================================================================
             2. MY UPLOADED DOCUMENTS ACCORDION
            ========================================================================= */}
-        <div className="documents-accordion-container" style={{ marginBottom: "0.6rem" }}>
+        <div className="documents-accordion-container">
           <div
-            className="accordion-header"
+            className="accordion-header full-cover"
             onClick={() => setUploadedExpanded(!uploadedExpanded)}
             title="Toggle Uploaded Documents Container"
           >
-            <div className="accordion-title-group">
+            <div className="accordion-title-group" style={{ width: "100%" }}>
               <svg
                 width="14"
                 height="14"
@@ -251,30 +377,21 @@ export default function Sidebar({
                 <line x1="12" y1="18" x2="12" y2="12" />
                 <polyline points="9 15 12 12 15 15" />
               </svg>
-              <span>Uploaded Documents</span>
+              <span className="accordion-main-title">Uploaded Documents</span>
               <span className="doc-count-badge">{uploadedDocs.length}</span>
             </div>
-
-            <button
-              type="button"
-              className="btn-accordion-quick-upload"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenUpload();
-              }}
-              title="Upload PDF document"
-            >
-              + Upload
-            </button>
           </div>
 
           {/* Accordion Content */}
           {uploadedExpanded && (
             <div className="accordion-content">
-              {/* Minimalist Upload Pill */}
+              {/* Minimalist Upload Button */}
               <div
                 className="compact-upload-pill"
-                onClick={onOpenUpload}
+                onClick={() => {
+                  onOpenUpload();
+                  handleAutoCloseMobile();
+                }}
                 title="Upload PDF (contracts, invoices, research papers)"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -284,6 +401,34 @@ export default function Sidebar({
                 </svg>
                 <span>Upload General PDF</span>
               </div>
+
+              {/* Check & Uncheck All Helper Bar for Uploads */}
+              {uploadedDocs.length > 0 && (
+                <div className="doc-section-actions-bar">
+                  <span className="doc-selection-summary">
+                    {selectedUploadCount} / {uploadedDocs.length} selected
+                  </span>
+                  <div className="doc-selection-btn-group">
+                    <button
+                      type="button"
+                      className="btn-select-action"
+                      onClick={handleSelectAllUploads}
+                      title="Check all uploaded documents"
+                    >
+                      Select All
+                    </button>
+                    <span className="action-dot-divider">•</span>
+                    <button
+                      type="button"
+                      className="btn-select-action"
+                      onClick={handleDeselectAllUploads}
+                      title="Uncheck all uploaded documents"
+                    >
+                      Uncheck All
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Uploaded Documents List */}
               {uploadedDocs.length === 0 ? (
@@ -332,6 +477,7 @@ export default function Sidebar({
                             onClick={(e) => {
                               e.stopPropagation();
                               onPreviewDocument(doc);
+                              handleAutoCloseMobile();
                             }}
                             title="Open uploaded PDF in viewer"
                           >
@@ -351,7 +497,7 @@ export default function Sidebar({
         </div>
 
         {/* =========================================================================
-            CHATGPT-STYLE CONVERSATION THREADS (Primary Real Estate)
+            3. CHATGPT-STYLE CONVERSATION THREADS (Recent Analyses)
            ========================================================================= */}
         <div className="history-section">
           <div className="sidebar-section-title">
@@ -369,7 +515,10 @@ export default function Sidebar({
                   key={idx}
                   type="button"
                   className="history-thread-item"
-                  onClick={() => onSelectHistory(h)}
+                  onClick={() => {
+                    onSelectHistory(h);
+                    handleAutoCloseMobile();
+                  }}
                   title={h.question}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="thread-icon">
@@ -383,70 +532,196 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* User Account Profile & Sign Out */}
-      {currentUser && (
-        <div className="sidebar-user-section">
-          <div className="sidebar-user-info">
-            <div className="user-avatar-circle mini">
-              {currentUser.user_metadata?.avatar_url ? (
-                <img
-                  src={currentUser.user_metadata.avatar_url}
-                  alt="User"
-                  className="user-avatar-img"
-                />
-              ) : (
-                <span>
-                  {currentUser.user_metadata?.full_name
-                    ? currentUser.user_metadata.full_name
-                        .split(/\s+/)
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join("")
-                        .toUpperCase()
-                    : (currentUser.email || "U")[0].toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="sidebar-user-details">
-              <span className="sidebar-user-name">
-                {currentUser.user_metadata?.full_name || currentUser.email?.split("@")[0]}
-              </span>
-              <span className="sidebar-user-email">
-                {currentUser.user_metadata?.role ? `${currentUser.user_metadata.role} • ` : ""}{currentUser.email}
-              </span>
-            </div>
-          </div>
-          {onSignOut && (
+      {/* =========================================================================
+          4. CHATGPT-STYLE USER PROFILE & FLOATING POPOVER MENU (Screenshot 4)
+         ========================================================================= */}
+      <div className="sidebar-chatgpt-user-wrapper" ref={userMenuRef}>
+        {/* Floating Upward Popover Menu */}
+        {userMenuOpen && (
+          <div className="chatgpt-popover-menu" role="menu" aria-label="User Options Menu">
+            {/* Popover Header Card (Profile Link) */}
             <button
               type="button"
-              className="btn-sidebar-signout"
-              onClick={onSignOut}
-              title="Sign out of your account"
+              className="chatgpt-popover-item user-header-item"
+              onClick={() => {
+                setUserMenuOpen(false);
+                if (onOpenProfile) onOpenProfile();
+                handleAutoCloseMobile();
+              }}
+              role="menuitem"
             >
-              Sign Out
+              <div className="user-avatar-circle mini">
+                {currentUser?.user_metadata?.avatar_url ? (
+                  <img
+                    src={currentUser.user_metadata.avatar_url}
+                    alt={userFullName}
+                    className="user-avatar-img"
+                  />
+                ) : (
+                  <span>{userInitials}</span>
+                )}
+              </div>
+              <div className="chatgpt-item-details">
+                <span className="chatgpt-user-title">{userFullName}</span>
+                <span className="chatgpt-user-subtitle">{userRole}</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="chevron-right">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </button>
-          )}
-        </div>
-      )}
 
-      {/* Bottom Status Footer */}
-      <div className="sidebar-footer">
-        <div className="system-mode-tag">
-          <span className="doc-status-dot" />
-          <span>{activeEngine === "fastapi_live" ? "FastAPI Live" : "SEC 10-K Index"}</span>
-        </div>
-        {onToggleTheme && (
-          <button
-            type="button"
-            className="sidebar-theme-toggle-btn"
-            onClick={onToggleTheme}
-            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            aria-label="Toggle color theme"
-          >
-            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
-          </button>
+            <div className="chatgpt-menu-divider" />
+
+            {/* Theme Toggle Item */}
+            {onToggleTheme && (
+              <button
+                type="button"
+                className="chatgpt-popover-item"
+                onClick={() => {
+                  onToggleTheme();
+                }}
+                role="menuitem"
+              >
+                {theme === "dark" ? (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="5" />
+                      <line x1="12" y1="1" x2="12" y2="3" />
+                      <line x1="12" y1="21" x2="12" y2="23" />
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                      <line x1="1" y1="12" x2="3" y2="12" />
+                      <line x1="21" y1="12" x2="23" y2="12" />
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                    </svg>
+                    <span>Theme: Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                    <span>Theme: Dark Mode</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Profile Trigger */}
+            <button
+              type="button"
+              className="chatgpt-popover-item"
+              onClick={() => {
+                setUserMenuOpen(false);
+                if (onOpenProfile) onOpenProfile();
+                handleAutoCloseMobile();
+              }}
+              role="menuitem"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Profile</span>
+            </button>
+
+            {/* Settings Trigger */}
+            <button
+              type="button"
+              className="chatgpt-popover-item"
+              onClick={() => {
+                setUserMenuOpen(false);
+                if (onOpenSettings) onOpenSettings();
+                handleAutoCloseMobile();
+              }}
+              role="menuitem"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span>Settings</span>
+            </button>
+
+            <div className="chatgpt-menu-divider" />
+
+            {/* Help / Guide Trigger */}
+            <button
+              type="button"
+              className="chatgpt-popover-item"
+              onClick={() => {
+                setUserMenuOpen(false);
+                if (onOpenHelp) onOpenHelp();
+                handleAutoCloseMobile();
+              }}
+              role="menuitem"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>Help &amp; Documentation</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="chevron-right">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+
+            {/* Log Out */}
+            {onSignOut && (
+              <button
+                type="button"
+                className="chatgpt-popover-item logout-item"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onSignOut();
+                }}
+                role="menuitem"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Log out</span>
+              </button>
+            )}
+          </div>
         )}
-        <span className="version-pill">v1.4</span>
+
+        {/* ChatGPT Bottom User Profile Bar (Screenshot 4: PA Parkar Plus) */}
+        <button
+          type="button"
+          className={`chatgpt-user-bar ${userMenuOpen ? "active" : ""}`}
+          onClick={() => setUserMenuOpen(!userMenuOpen)}
+          title="Account settings &amp; profile"
+          aria-expanded={userMenuOpen}
+          aria-haspopup="true"
+        >
+          <div className="user-avatar-circle mini">
+            {currentUser?.user_metadata?.avatar_url ? (
+              <img
+                src={currentUser.user_metadata.avatar_url}
+                alt={userFullName}
+                className="user-avatar-img"
+              />
+            ) : (
+              <span>{userInitials}</span>
+            )}
+          </div>
+
+          <div className="chatgpt-bar-user-info">
+            <span className="chatgpt-bar-name">{userFullName}</span>
+            <span className="chatgpt-bar-role">{userRole}</span>
+          </div>
+
+          <div className="chatgpt-bar-indicator">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        </button>
       </div>
     </aside>
   );

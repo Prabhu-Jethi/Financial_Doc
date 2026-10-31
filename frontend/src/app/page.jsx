@@ -8,6 +8,9 @@ import InspectorDrawer from "../components/workspace/InspectorDrawer";
 import UploadModal from "../components/modals/UploadModal";
 import PdfViewerModal from "../components/modals/PdfViewerModal";
 import CompareMatrixModal from "../components/modals/CompareMatrixModal";
+import ProfileModal from "../components/modals/ProfileModal";
+import SettingsModal from "../components/modals/SettingsModal";
+import AuditGuideModal from "../components/modals/AuditGuideModal";
 import { createClient } from "../lib/supabase/browser";
 
 export default function Home() {
@@ -18,7 +21,10 @@ export default function Home() {
   const [history, setHistory] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  // Exclusive Active Feature Modal: exactly one can be opened at once
+  // null | "upload" | "pdf" | "compare" | "profile" | "settings" | "guide"
+  const [activeModal, setActiveModal] = useState(null);
 
   // Authenticated Supabase User
   const [currentUser, setCurrentUser] = useState(null);
@@ -27,13 +33,9 @@ export default function Home() {
   const [activeCitation, setActiveCitation] = useState(null);
   const [activeDocument, setActiveDocument] = useState(null);
 
-  // PDF Viewer Modal State
-  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  // Target Citation/Document for PDF Viewer Modal
   const [pdfTargetCitation, setPdfTargetCitation] = useState(null);
   const [pdfTargetDoc, setPdfTargetDoc] = useState(null);
-
-  // Multi-Company Benchmark Matrix Modal State
-  const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   // Documents
   const [documents, setDocuments] = useState([]);
@@ -42,6 +44,14 @@ export default function Home() {
 
   // Theme State (Dark / Light)
   const [theme, setTheme] = useState("light");
+
+  const openModal = (modalName) => {
+    setActiveModal(modalName);
+  };
+
+  const closeModal = () => {
+    setActiveModal(null);
+  };
 
   const abortControllerRef = useRef(null);
   const scrollRef = useRef(null);
@@ -86,6 +96,11 @@ export default function Home() {
       }
     } catch (e) {
       // quiet fallback
+    }
+
+    // 3. Responsive initial state: auto-collapse sidebar on smaller screens (<900px)
+    if (typeof window !== "undefined" && window.innerWidth < 900) {
+      setSidebarOpen(false);
     }
   }, []);
 
@@ -151,9 +166,22 @@ export default function Home() {
     );
   };
 
+  const handleSelectDocs = (ids) => {
+    setSelectedDocIds((prev) => Array.from(new Set([...prev, ...ids])));
+  };
+
+  const handleDeselectDocs = (ids) => {
+    setSelectedDocIds((prev) => prev.filter((id) => !ids.includes(id)));
+  };
+
   const handleExecuteQuery = async (queryText, queryPeriod) => {
     const q = (queryText || question).trim();
     if (!q) return;
+
+    // Auto-dismiss sidebar on small screens when query executes
+    if (typeof window !== "undefined" && window.innerWidth < 900) {
+      setSidebarOpen(false);
+    }
 
     setLoading(true);
     setQuestion("");
@@ -258,17 +286,22 @@ export default function Home() {
     setActiveDocument(null);
     setPdfTargetCitation(cite);
     setPdfTargetDoc(null);
-    setPdfModalOpen(true);
+    openModal("pdf");
     setInspectorOpen(true);
   };
 
   const handlePreviewDocument = (doc) => {
     setPdfTargetDoc(doc);
     setPdfTargetCitation(null);
-    setPdfModalOpen(true);
+    openModal("pdf");
   };
 
   const handleSelectHistory = (hItem) => {
+    // Auto-dismiss sidebar on small screens when history is picked
+    if (typeof window !== "undefined" && window.innerWidth < 900) {
+      setSidebarOpen(false);
+    }
+
     if (hItem.result) {
       setMessages((prev) => [
         ...prev,
@@ -356,9 +389,11 @@ Quote: "${c.exact_quote}"`
         documents={documents}
         selectedDocIds={selectedDocIds}
         onToggleDocSelection={handleToggleDocSelection}
-        onOpenUpload={() => setUploadModalOpen(true)}
+        onSelectDocs={handleSelectDocs}
+        onDeselectDocs={handleDeselectDocs}
+        onOpenUpload={() => openModal("upload")}
         onPreviewDocument={handlePreviewDocument}
-        onOpenCompare={() => setCompareModalOpen(true)}
+        onOpenCompare={() => openModal("compare")}
         currentUser={currentUser}
         onSignOut={handleSignOut}
         history={history}
@@ -367,7 +402,19 @@ Quote: "${c.exact_quote}"`
         activeEngine={health.active_engine}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onOpenProfile={() => openModal("profile")}
+        onOpenSettings={() => openModal("settings")}
+        onOpenHelp={() => openModal("guide")}
       />
+
+      {/* Mobile Sidebar Dimming Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Main Chat & Query Stage */}
       <main className="webapp-main">
@@ -399,7 +446,7 @@ Quote: "${c.exact_quote}"`
             <button
               type="button"
               className="btn-top-action btn-compare-highlight"
-              onClick={() => setCompareModalOpen(true)}
+              onClick={() => openModal("compare")}
               title="Compare 4-Company Benchmark Matrix (AAPL, MSFT, AMZN, META)"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -410,47 +457,19 @@ Quote: "${c.exact_quote}"`
               <span>Compare Matrix</span>
             </button>
 
-            {/* Theme Light/Dark Toggler Button */}
-            <button
-              type="button"
-              className="btn-theme-toggle"
-              onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              aria-label="Toggle color theme"
-            >
-              {theme === "dark" ? (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="5" />
-                    <line x1="12" y1="1" x2="12" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" />
-                    <line x1="21" y1="12" x2="23" y2="12" />
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                  </svg>
-                  <span>Light</span>
-                </>
-              ) : (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  </svg>
-                  <span>Dark</span>
-                </>
-              )}
-            </button>
-
             {messages.length > 0 && (
               <button
                 type="button"
                 className="btn-top-action"
                 onClick={handleNewSession}
                 title="Clear current analysis thread"
+                aria-label="Clear Thread"
               >
-                Clear Thread
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                <span>Clear Thread</span>
               </button>
             )}
 
@@ -466,56 +485,6 @@ Quote: "${c.exact_quote}"`
               </svg>
               <span>Chunk Inspector</span>
             </button>
-
-            {/* Authenticated User Profile Pill */}
-            {currentUser ? (
-              <div className="top-bar-user-badge" title={`Signed in as ${currentUser.email}`}>
-                <div className="user-avatar-circle mini">
-                  {currentUser.user_metadata?.avatar_url ? (
-                    <img
-                      src={currentUser.user_metadata.avatar_url}
-                      alt="User"
-                      className="user-avatar-img"
-                    />
-                  ) : (
-                    <span>
-                      {currentUser.user_metadata?.full_name
-                        ? currentUser.user_metadata.full_name
-                            .split(/\s+/)
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join("")
-                            .toUpperCase()
-                        : (currentUser.email || "U")[0].toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <span className="user-email-label">
-                  {currentUser.user_metadata?.full_name || currentUser.email?.split("@")[0]}
-                </span>
-                <button
-                  type="button"
-                  className="btn-top-signout"
-                  onClick={handleSignOut}
-                  title="Sign out of your account"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <a
-                href="/login"
-                className="btn-top-action btn-top-login"
-                title="Sign in with Google"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                  <polyline points="10 17 15 12 10 7" />
-                  <line x1="15" y1="12" x2="3" y2="12" />
-                </svg>
-                <span>Sign In</span>
-              </a>
-            )}
           </div>
         </header>
 
@@ -538,7 +507,7 @@ Quote: "${c.exact_quote}"`
           setPeriod={setPeriod}
           loading={loading}
           onSubmit={() => handleExecuteQuery(question, period)}
-          onOpenUpload={() => setUploadModalOpen(true)}
+          onOpenUpload={() => openModal("upload")}
           activeDocSummary={activeDocSummary}
         />
       </main>
@@ -557,31 +526,81 @@ Quote: "${c.exact_quote}"`
             setPdfTargetDoc(target);
             setPdfTargetCitation(null);
           }
-          setPdfModalOpen(true);
+          openModal("pdf");
         }}
       />
 
-      {/* Upload Document Modal */}
-      <UploadModal
-        isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        onDocumentUploaded={handleDocumentUploaded}
-      />
+      {/* Mobile Inspector Drawer Dimming Backdrop */}
+      {inspectorOpen && (
+        <div
+          className="inspector-mobile-backdrop"
+          onClick={() => setInspectorOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Interactive PDF Provenance Viewer Modal */}
-      <PdfViewerModal
-        isOpen={pdfModalOpen}
-        onClose={() => setPdfModalOpen(false)}
-        citation={pdfTargetCitation}
-        document={pdfTargetDoc}
-      />
+      {/* =========================================================================
+          EXCLUSIVE MODAL PORTALS (Only one feature can be opened at once)
+         ========================================================================= */}
+      {/* 1. Upload Document Modal */}
+      {activeModal === "upload" && (
+        <UploadModal
+          isOpen={true}
+          onClose={closeModal}
+          onDocumentUploaded={handleDocumentUploaded}
+        />
+      )}
 
-      {/* Multi-Company Comparison Benchmark Matrix Modal */}
-      <CompareMatrixModal
-        isOpen={compareModalOpen}
-        onClose={() => setCompareModalOpen(false)}
-        onSelectPrompt={(p) => handleExecuteQuery(p)}
-      />
+      {/* 2. Interactive PDF Provenance Viewer Modal */}
+      {activeModal === "pdf" && (
+        <PdfViewerModal
+          isOpen={true}
+          onClose={closeModal}
+          citation={pdfTargetCitation}
+          document={pdfTargetDoc}
+        />
+      )}
+
+      {/* 3. Multi-Company Comparison Benchmark Matrix Modal */}
+      {activeModal === "compare" && (
+        <CompareMatrixModal
+          isOpen={true}
+          onClose={closeModal}
+          onSelectPrompt={(p) => {
+            closeModal();
+            handleExecuteQuery(p);
+          }}
+        />
+      )}
+
+      {/* 4. User Profile Modal */}
+      {activeModal === "profile" && (
+        <ProfileModal
+          isOpen={true}
+          onClose={closeModal}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* 5. User & Application Settings Modal */}
+      {activeModal === "settings" && (
+        <SettingsModal
+          isOpen={true}
+          onClose={closeModal}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          activeEngine={health.active_engine}
+          onClearThread={handleNewSession}
+        />
+      )}
+
+      {/* 6. Help & Audit Integrity Guide Modal */}
+      {activeModal === "guide" && (
+        <AuditGuideModal
+          isOpen={true}
+          onClose={closeModal}
+        />
+      )}
     </div>
   );
 }

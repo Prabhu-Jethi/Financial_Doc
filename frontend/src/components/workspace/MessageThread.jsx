@@ -182,33 +182,6 @@ export default function MessageThread({
             </div>
 
             <div className="assistant-content-card">
-              {/* Header with status badge & explicit scope */}
-              <div className="assistant-meta-header">
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                  <span
-                    className={`audit-badge-pill ${
-                      item.status === "answered"
-                        ? "verified"
-                        : item.status === "insufficient_evidence"
-                        ? "insufficient"
-                        : "out-of-scope"
-                    }`}
-                  >
-                    {item.status === "answered" && "✓ Verified from 10-K"}
-                    {item.status === "insufficient_evidence" && "✕ Insufficient Evidence"}
-                    {item.status === "out_of_scope" && "⊘ Out of Scope"}
-                  </span>
-
-                  <span className="source-scope-label">
-                    {item.company ? `${item.company} Form 10-K` : "SEC Form 10-K Disclosures"}
-                  </span>
-                </div>
-
-                <span className="reporting-period-tag font-mono">
-                  {item.reporting_periods?.join(", ") || "FY2024"}
-                </span>
-              </div>
-
               {/* 1. Readable Narrative Answer */}
               <div className="response-text-body">
                 <div className="answer-prose">{item.answer_text}</div>
@@ -410,7 +383,11 @@ export default function MessageThread({
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    <span>Supporting SEC 10-K Pages ({item.citations.length} Citations):</span>
+                    <span>
+                      {item.citations.some(c => c.report_type === "10-K" || ["AAPL", "AMZN", "MSFT", "META"].includes(c.company || c.ticker))
+                        ? `Supporting SEC 10-K Disclosures (${item.citations.length} Citations)`
+                        : `Source Document Citations (${item.citations.length})`}
+                    </span>
                   </div>
                   <div className="citations-chips-group">
                     {item.citations.map((cite, cIdx) => {
@@ -535,7 +512,7 @@ export default function MessageThread({
 
                 <div className="tools-right font-mono">
                   {item.timings_ms?.total && (
-                    <span>{item.timings_ms.total}ms • {item.request_id || "req_local"}</span>
+                    <span>{item.timings_ms.total > 1000 ? `${(item.timings_ms.total / 1000).toFixed(1)}s` : `${item.timings_ms.total}ms`}</span>
                   )}
                 </div>
               </div>
