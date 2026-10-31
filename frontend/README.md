@@ -1,48 +1,47 @@
-# Apex Financial Intelligence — Frontend Suite
+# DocIntel — Frontend Suite
 
-An institutional-grade, responsive AI analysis workspace for Apple Inc. SEC Form 10-K filings (FY2022–FY2024). Features cited natural language answers, interactive visualizers, deterministic Decimal calculation ledgers, and table cell provenance inspection.
+An institutional-grade, responsive AI analysis workspace for multi-company financial reports (Apple, Microsoft, Amazon, Meta) and user-uploaded PDF documents. Built with Next.js 14 App Router, vanilla CSS, and OpenAI/ChatGPT system aesthetics.
 
 ---
 
 ## Key Features
 
-1. **Bloomberg / Linear Inspired Visual Design**
-   - High-density dark glassmorphism palette (`#070b14` canvas, obsidian elevated cards, luminous cyan/emerald/amber status signals).
-   - Modern typography: `Inter` for crisp narrative legibility and `JetBrains Mono` for audited numbers, decimal strings, and formulas.
-   - Micro-animations: Smooth tab switches, hover-reactive cards, and real-time pulse indicators.
+1. **In-Document Evidence Highlighting**
+   - **Interactive Split View**: Compare illuminated chunk cards side-by-side with the original PDF canvas.
+   - **Native PDF Canvas Highlighting**: Injects `#page=N&search="phrase"` into browser PDF engines for direct on-page yellow highlights.
+   - **Illuminated Marker Layer**: Numerical figures (`$391,035M`, `31.51%`), dates, and metrics are highlighted in glowing amber badges.
+   - **Flexible View Modes**: Instant toggling between `Split View`, `Full PDF`, and `Evidence Text` reader.
 
-2. **Audited SEC Key Performance Indicators (Top Strip)**
-   - Instant KPI tiles: FY24 Total Net Sales ($391,035M), Operating Margin (31.51%), iPhone Sales ($201,183M), Services Growth (+12.87%), and Cash Balance ($29,943M).
-   - Click-to-analyze: Clicking any tile instantly populates and executes the verified query.
+2. **OpenAI / ChatGPT System Aesthetics**
+   - Clean, lightweight system font stack (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`).
+   - Standardized typography weights (400 regular, 500 medium, 600 semibold).
+   - Zero external font loading latency.
 
-3. **Smart Query Console & Category Navigator**
-   - Filter pills by domain: *Revenue & Segments*, *Margins & Formulas*, *Balance Sheet*, *MD&A Commentary*, *Boundary Controls*.
-   - Sample prompt chips for DEV evaluation queries (`DEV-001` through `DEV-010`).
-   - Period selector dropdown (*All Periods*, *FY2024*, *FY2023*, *FY2022*).
-   - Keyboard shortcut: <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to execute.
+3. **Exclusive Modal Architecture**
+   - Centralized `activeModal` controller prevents popup collisions.
+   - Unified fixed backdrop overlay (`.modal-backdrop`) with `z-index: 99999` and backdrop blur.
+   - Modals include: `PdfViewerModal`, `UploadModal`, `CompareMatrixModal`, `ProfileModal`, `SettingsModal`, and `AuditGuideModal`.
 
-4. **Multi-Tab Audited Workspace**
-   - **Intelligence Brief**: Cited natural language explanation with highlighted metrics and provenance anchors.
-   - **Visualizer & Trends**: Dynamic SVG segment breakdown charts with hover percentages, multi-year sales trajectory, and operating margin gauge meter.
-   - **Math Ledger**: Step-by-step formula breakdown, operands table (with source statement & page), and Decimal precision results (TRD § 5).
-   - **Verified Facts**: Atomic facts grid with normalized decimals, scale, and verification status (TRD § 4).
+4. **100% Self-Contained Provenance Viewer**
+   - Zero external links to EDGAR servers. All documents stream through internal secure endpoints.
+   - Interactive citation tags with printed page numbers and document titles.
 
-5. **Audited Provenance & Document Inspection Modal**
-   - Citation tiles with printed page badges (e.g. Page 29 Consolidated Statements of Operations).
-   - In-app 10-K document viewer modal displaying extracted table cells and direct links to official SEC PDFs.
+5. **Multi-Company & User Document Management**
+   - Quick batch-selection controls (`Select All` / `Uncheck All`).
+   - Seamless switching between Curated SEC 10-K Filings and Uploaded Documents.
+   - Dedicated `Upload General PDF` action with drag-and-drop ingestion.
 
-6. **Full Responsiveness Across All Devices**
-   - **Desktop (> 1100px)**: Dual-pane workspace with real-time sidebar and wide charts.
-   - **Tablet (768px – 1100px)**: Adaptive 2-column layout with flexible sidebar.
-   - **Mobile (< 768px)**: Single-column flow with swipeable KPI ticker, stacked query toolbar, and touch-optimized action targets.
+6. **Audio Executive Briefings & Live Excel Models**
+   - Speech synthesis audio briefings with text normalization.
+   - Live `.xls` spreadsheet export with native formulas.
 
 ---
 
 ## Tech Stack
 - **Framework**: Next.js 14 (App Router)
-- **UI Logic**: React 18 (Vanilla JavaScript / JSX)
-- **Styling**: Pure Vanilla CSS (`globals.css`) with CSS custom properties (Zero Tailwind, zero external component frameworks)
-- **Zero Heavy Dependencies**: Pure native SVG charts, no heavy charting libraries
+- **Styling**: Pure Vanilla CSS (`globals.css`) with CSS custom properties
+- **Auth**: `@supabase/ssr` (Cookie-based session handling)
+- **Security**: Hardened HTTP response headers (`X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`)
 
 ---
 
