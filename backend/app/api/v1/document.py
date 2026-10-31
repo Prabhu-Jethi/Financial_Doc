@@ -60,11 +60,43 @@ async def upload_document(file: UploadFile = File(...),
     doc_id = f"doc_{uuid.uuid4().hex[:8]}"
 
     file_bytes = await file.read()
+    # Security: Enforce maximum file size (30MB) to prevent memory exhaustion DoS
+    if len(file_bytes) > 30 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum supported PDF size is 30 MB.")
+    # Security: Validate PDF magic bytes header to prevent MIME-type spoofing
+    if not file_bytes.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Invalid PDF format: file header magic bytes mismatch.")
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(file_bytes)
         temp_file_path = tmp.name
     file_hash = hashlib.sha256(file_bytes).hexdigest()
     try:
+        # Check if identical file was already ingested by SHA-256 hash
+        with psycopg.connect(settings.database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT d.document_id, d.file_name, d.report_type,
+                           (SELECT count(*) FROM chunks c WHERE c.document_id = d.document_id)
+                    FROM documents d
+                    WHERE d.file_hash_sha256 = %s
+                    LIMIT 1;
+                    """,
+                    (file_hash,)
+                )
+                existing = cur.fetchone()
+                if existing:
+                    return {
+                        "document_id": existing[0],
+                        "file_name": existing[1] or file.filename,
+                        "doc_type": existing[2],
+                        "total_pages": 1,
+                        "chunks_ingested": existing[3] or 1,
+                        "status": "ready",
+                        "message": "Document already ingested and ready."
+                    }
+
         parser = ParserFactory.get_parser(doc_type)
         parsed_doc = parser.parse(file_path=temp_file_path, document_id=doc_id)
 
@@ -161,6 +193,11 @@ async def upload_document(file: UploadFile = File(...),
             "chunks_ingested": len(parsed_doc.chunks),
             "status": "ready"
         }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(exc)}")
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
