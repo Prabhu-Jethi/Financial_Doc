@@ -14,6 +14,8 @@ export default function Sidebar({
   onPreviewDocument,
   history = [],
   onSelectHistory,
+  onDeleteHistoryItem,
+  onClearHistory,
   onNewSession,
   onOpenCompare,
   currentUser = null,
@@ -502,6 +504,22 @@ export default function Sidebar({
         <div className="history-section">
           <div className="sidebar-section-title">
             <span>Recent Analyses</span>
+            {history.length > 0 && onClearHistory && (
+              <button
+                type="button"
+                onClick={onClearHistory}
+                title="Clear all recent analyses"
+                style={{
+                  fontSize: "0.68rem",
+                  textTransform: "none",
+                  color: "var(--text-dim)",
+                  padding: "0 4px",
+                  cursor: "pointer",
+                }}
+              >
+                Clear all
+              </button>
+            )}
           </div>
 
           {history.length === 0 ? (
@@ -511,21 +529,60 @@ export default function Sidebar({
           ) : (
             <div className="history-thread-list">
               {history.map((h, idx) => (
-                <button
+                <div
                   key={idx}
-                  type="button"
-                  className="history-thread-item"
-                  onClick={() => {
-                    onSelectHistory(h);
-                    handleAutoCloseMobile();
+                  className="history-thread-item-wrapper"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    width: "100%",
+                    gap: "2px",
                   }}
-                  title={h.question}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="thread-icon">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="thread-title">{h.question}</span>
-                </button>
+                  <button
+                    type="button"
+                    className="history-thread-item"
+                    onClick={() => {
+                      onSelectHistory(h);
+                      handleAutoCloseMobile();
+                    }}
+                    title={h.question}
+                    style={{ flex: 1, minWidth: 0, textAlign: "left" }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="thread-icon" style={{ flexShrink: 0 }}>
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span className="thread-title">{h.question}</span>
+                  </button>
+                  {onDeleteHistoryItem && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteHistoryItem(idx);
+                      }}
+                      title="Remove this analysis"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--text-dim)",
+                        padding: "4px 6px",
+                        cursor: "pointer",
+                        opacity: 0.6,
+                        display: "flex",
+                        alignItems: "center",
+                        borderRadius: "var(--radius-sm)",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}

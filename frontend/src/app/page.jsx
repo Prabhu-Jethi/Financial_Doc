@@ -45,6 +45,13 @@ export default function Home() {
   // Theme State (Dark / Light)
   const [theme, setTheme] = useState("light");
 
+  // Application & Search Settings (Persisted to localStorage)
+  const [appSettings, setAppSettings] = useState({
+    retrievalMode: "hybrid",
+    topK: 7,
+    showCitationScore: true,
+  });
+
   const openModal = (modalName) => {
     setActiveModal(modalName);
   };
@@ -101,6 +108,33 @@ export default function Home() {
     // 3. Responsive initial state: auto-collapse sidebar on smaller screens (<900px)
     if (typeof window !== "undefined" && window.innerWidth < 900) {
       setSidebarOpen(false);
+    }
+
+    // 4. Restore persisted conversation history, active thread, and settings from localStorage
+    try {
+      const savedHistory = localStorage.getItem("docintel_recent_analyses");
+      if (savedHistory) {
+        const parsed = JSON.parse(savedHistory);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setHistory(parsed);
+        }
+      }
+
+      const savedMessages = localStorage.getItem("docintel_active_messages");
+      if (savedMessages) {
+        const parsedMsgs = JSON.parse(savedMessages);
+        if (Array.isArray(parsedMsgs) && parsedMsgs.length > 0) {
+          setMessages(parsedMsgs);
+        }
+      }
+
+      const savedSettings = localStorage.getItem("docintel_settings");
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setAppSettings((prev) => ({ ...prev, ...parsedSettings }));
+      }
+    } catch (e) {
+      console.warn("[Storage] Error restoring persisted state", e);
     }
   }, []);
 
@@ -238,18 +272,30 @@ export default function Home() {
         ...data,
       };
 
-      setMessages((prev) => [...prev, newTurn]);
+      setMessages((prev) => {
+        const updated = [...prev, newTurn];
+        try {
+          localStorage.setItem("docintel_active_messages", JSON.stringify(updated.slice(-25)));
+        } catch (e) {}
+        return updated;
+      });
 
-      // Add to session history
-      setHistory((prev) => [
-        {
-          question: q,
-          period: queryPeriod || period,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          result: data,
-        },
-        ...prev.filter((h) => h.question !== q).slice(0, 9),
-      ]);
+      // Add to session history (persisted across page reloads)
+      setHistory((prev) => {
+        const updated = [
+          {
+            question: q,
+            period: queryPeriod || period,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            result: data,
+          },
+          ...prev.filter((h) => h.question !== q).slice(0, 24),
+        ];
+        try {
+          localStorage.setItem("docintel_recent_analyses", JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
 
       // If response includes citations, set active in inspector
       if (data.citations && data.citations.length > 0) {
@@ -303,14 +349,17 @@ export default function Home() {
     }
 
     if (hItem.result) {
-      setMessages((prev) => [
-        ...prev,
+      const restored = [
         {
           question: hItem.question,
           period: hItem.period,
           ...hItem.result,
         },
-      ]);
+      ];
+      setMessages(restored);
+      try {
+        localStorage.setItem("docintel_active_messages", JSON.stringify(restored));
+      } catch (e) {}
     } else {
       handleExecuteQuery(hItem.question, hItem.period);
     }
@@ -320,6 +369,36 @@ export default function Home() {
     setMessages([]);
     setQuestion("");
     setActiveCitation(null);
+    try {
+      localStorage.removeItem("docintel_active_messages");
+    } catch (e) {}
+  };
+
+  const handleDeleteHistoryItem = (indexToDelete) => {
+    setHistory((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToDelete);
+      try {
+        localStorage.setItem("docintel_recent_analyses", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const handleClearAllHistory = () => {
+    setHistory([]);
+    try {
+      localStorage.removeItem("docintel_recent_analyses");
+    } catch (e) {}
+  };
+
+  const handleSaveSettings = (newSettings) => {
+    setAppSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      try {
+        localStorage.setItem("docintel_settings", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   const handleExportMemo = (item) => {
@@ -398,6 +477,8 @@ Quote: "${c.exact_quote}"`
         onSignOut={handleSignOut}
         history={history}
         onSelectHistory={handleSelectHistory}
+        onDeleteHistoryItem={handleDeleteHistoryItem}
+        onClearHistory={handleClearAllHistory}
         onNewSession={handleNewSession}
         activeEngine={health.active_engine}
         theme={theme}
@@ -591,6 +672,8 @@ Quote: "${c.exact_quote}"`
           onToggleTheme={toggleTheme}
           activeEngine={health.active_engine}
           onClearThread={handleNewSession}
+          settings={appSettings}
+          onSaveSettings={handleSaveSettings}
         />
       )}
 
