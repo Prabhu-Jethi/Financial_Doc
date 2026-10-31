@@ -135,8 +135,30 @@ Financial_Document_Intelligence/
 - Python 3.11 or 3.12
 - Node.js 18+ and npm
 - PostgreSQL database with `pgvector` (or a Supabase cloud instance)
+- *(Optional)* Docker & Docker Compose for containerized execution
 
-### 1. Backend Service (FastAPI)
+### Option A: One-Command Docker Deployment (Recommended)
+
+Both the FastAPI microservice and Next.js frontend are containerized with multi-stage builds, CPU-only PyTorch, health check gating, and unprivileged user security:
+
+```bash
+# 1. Build and start all services in the background
+docker compose up --build -d
+
+# 2. Verify health status
+docker compose ps
+
+# 3. View live microservice logs
+docker compose logs -f
+```
+- Web Application: [http://localhost:3000](http://localhost:3000)
+- Interactive API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### Option B: Local Bare-Metal Setup
+
+#### 1. Backend Service (FastAPI)
 ```bash
 # Activate virtual environment
 .\venv\Scripts\Activate.ps1
