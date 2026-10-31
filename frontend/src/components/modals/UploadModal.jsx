@@ -95,22 +95,8 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded }) {
 
     setUploading(true);
     setUploadError("");
-    setProgress(15);
+    setProgress(10);
     setUploadStatus("Uploading PDF to document intelligence pipeline...");
-
-    // Smooth status messages during background extraction & embedding
-    let curProgress = 15;
-    timerRef.current = setInterval(() => {
-      curProgress = Math.min(curProgress + 8, 88);
-      setProgress(curProgress);
-      if (curProgress >= 30 && curProgress < 60) {
-        setUploadStatus("Extracting tabular structures & narrative blocks with pdfplumber...");
-      } else if (curProgress >= 60 && curProgress < 85) {
-        setUploadStatus("Generating vector embeddings & committing chunks to pgvector...");
-      } else if (curProgress >= 85) {
-        setUploadStatus("Persisting original document & finalizing indexes...");
-      }
-    }, 450);
 
     try {
       const formData = new FormData();
@@ -122,8 +108,6 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded }) {
         body: formData,
       });
 
-      if (timerRef.current) clearInterval(timerRef.current);
-
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.detail || `Upload failed with HTTP ${res.status}`);
@@ -131,41 +115,116 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded }) {
 
       const data = await res.json();
 
-      setProgress(100);
-      setUploadStatus(
-        `Ingested ${data.chunks_ingested || 0} chunks across ${data.total_pages || 1} pages successfully!`
-      );
+      // Fast path: if already cached and ready
+      if (data.status === "ready") {
+        setProgress(100);
+        setUploadStatus(
+          data.current_step || `Ingested ${data.chunks_ingested || 0} chunks across ${data.total_pages || 1} pages successfully!`
+        );
 
-      const cleanCo = companyName.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
-      const newDoc = {
-        document_id: data.document_id,
-        company: cleanCo,
-        ticker: docType === "sec_10k" ? "10-K" : "DOC",
-        report_type: docType,
-        report_fiscal_year: parseInt(fiscalYear, 10) || new Date().getFullYear(),
-        period_ended: new Date().toISOString().split("T")[0],
-        filing_date: new Date().toISOString().split("T")[0],
-        file_name: data.file_name,
-        source_url: `/api/documents/${data.document_id}/pdf`,
-        status: "ready",
-        page_count: data.total_pages || 1,
-        chunks_ingested: data.chunks_ingested || 0,
-        isCustom: true,
+        const cleanCo = companyName.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
+        const newDoc = {
+          document_id: data.document_id,
+          company: cleanCo,
+          ticker: docType === "sec_10k" ? "10-K" : "DOC",
+          report_type: docType,
+          report_fiscal_year: parseInt(fiscalYear, 10) || new Date().getFullYear(),
+          period_ended: new Date().toISOString().split("T")[0],
+          filing_date: new Date().toISOString().split("T")[0],
+          file_name: data.file_name,
+          source_url: `/api/documents/${data.document_id}/pdf`,
+          status: "ready",
+          page_count: data.total_pages || 1,
+          chunks_ingested: data.chunks_ingested || 0,
+          isCustom: true,
+        };
+
+        setTimeout(() => {
+          if (onDocumentUploaded) {
+            onDocumentUploaded(newDoc);
+          }
+          setUploading(false);
+          onClose();
+        }, 700);
+        return;
+      }
+
+      // Asynchronous ingestion: poll live backend status every 800ms
+      setProgress(data.progress || 15);
+      setUploadStatus(data.current_step || "Document accepted. Background ingestion running...");
+
+      const pollInterval = 800;
+      const maxAttempts = 120; // 96 seconds max timeout
+      let attempts = 0;
+
+      const pollStatus = async () => {
+        try {
+          const statusRes = await fetch(`/api/documents/${encodeURIComponent(data.document_id)}/status`);
+          if (!statusRes.ok) {
+            throw new Error(`Status check failed: HTTP ${statusRes.status}`);
+          }
+          const st = await statusRes.json();
+
+          if (st.status === "ready") {
+            setProgress(100);
+            setUploadStatus(st.current_step || `Ingested ${st.chunks_ingested || 0} chunks successfully!`);
+
+            const cleanCo = companyName.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
+            const newDoc = {
+              document_id: st.document_id,
+              company: cleanCo,
+              ticker: docType === "sec_10k" ? "10-K" : "DOC",
+              report_type: docType,
+              report_fiscal_year: parseInt(fiscalYear, 10) || new Date().getFullYear(),
+              period_ended: new Date().toISOString().split("T")[0],
+              filing_date: new Date().toISOString().split("T")[0],
+              file_name: st.file_name || selectedFile.name,
+              source_url: `/api/documents/${st.document_id}/pdf`,
+              status: "ready",
+              page_count: st.total_pages || 1,
+              chunks_ingested: st.chunks_ingested || 0,
+              isCustom: true,
+            };
+
+            setTimeout(() => {
+              if (onDocumentUploaded) {
+                onDocumentUploaded(newDoc);
+              }
+              setUploading(false);
+              onClose();
+            }, 700);
+            return;
+          }
+
+          if (st.status === "failed") {
+            throw new Error(st.error || "Document ingestion failed in background.");
+          }
+
+          // Still parsing: update real progress and real current step from server
+          setProgress(st.progress || 25);
+          setUploadStatus(st.current_step || "Extracting pages and generating embeddings...");
+
+          attempts++;
+          if (attempts < maxAttempts) {
+            timerRef.current = setTimeout(pollStatus, pollInterval);
+          } else {
+            throw new Error("Document ingestion is taking longer than expected. It will finish in the background.");
+          }
+        } catch (pollErr) {
+          setUploading(false);
+          setProgress(0);
+          setUploadStatus("");
+          setUploadError(pollErr.message || "Failed to verify document status.");
+        }
       };
 
-      setTimeout(() => {
-        if (onDocumentUploaded) {
-          onDocumentUploaded(newDoc);
-        }
-        setUploading(false);
-        onClose();
-      }, 700);
+      timerRef.current = setTimeout(pollStatus, pollInterval);
     } catch (err) {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
       setUploading(false);
       setProgress(0);
       setUploadStatus("");
-      setUploadError(err.message || "Failed to upload and parse document. Please try again.");
+      setUploadError(err.message || "Failed to upload document. Please try again.");
     }
   };
 

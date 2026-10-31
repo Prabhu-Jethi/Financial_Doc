@@ -1,70 +1,116 @@
 name: CI Pipeline
 
 on:
-    push:
-        branches: [ main, master ]
-    pull_request:
-        branches: [ main, master ]
-    workflow_dispatch: # Allows manual trigger
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
-    ## Backend CI
-    backend-test:
-        name: Backend Test Suite (Python 3.12)
-        runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: .
-        steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v4
+  ## =========================================================================
+  ## 1. Backend CI (Python 3.12 + Pytest Unit Tests)
+  ## =========================================================================
+  backend-test:
+    name: Backend Test Suite (Python 3.12)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-          - name: Set up Python 3.12
-            uses: actions/setup-python@v5
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
 
-            with:
-                python-version: "3.12"
-                cache: "pip" # Caches pip downloads so runs stay under 1 minute
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest pytest-asyncio
 
-          - name: Install Backend Dependencies
-            run: |
-                python -m pip install --upgrade pip
-                pip install -r requirements.txt
+      - name: Run Deterministic Unit Tests (52 Cases)
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+          SUPABASE_URL: "https://mock-supabase.supabase.co"
+          SUPABASE_SECRET_KEY: "mock-secret-key"
+          EXPLABS_API_KEY: "mock-explabs-key"
+          PYTHONPATH: "backend"
+        run: |
+          pytest backend/tests/unit/ -v --tb=short
 
-          - name: Run Deterministic Unit Tests (52 Cases)
-            env:
-                # Dummy values so Settings() initializes without missing env crashes
-                DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
-                SUPABASE_URL: "https://mock-supabase.supabase.co"
-                SUPABASE_SECRET_KEY: "mock-secret-key"
-                EXPLABS_API_KEY: "mock-explabs-key"
-            run: |
-                pytest backend/tests/unit/ -v --tb=short
+  ## =========================================================================
+  ## 2. Frontend CI (Next.js 14 Build Validation)
+  ## =========================================================================
+  frontend-build:
+    name: Frontend Build Check (Next.js 14)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    ## Frontend CI
-    frontend-build:
-        name: Frontend Build Check (Next.js 14)
-        runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: frontend
-        steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-          - name: Set up Node.js 20
-            uses: actions/setup-node@v4
-            with:
-                node-version: 20
-                cache: "npm"
-                cache-dependency-path: frontend/package-lock.json
+      - name: Install Frontend Dependencies
+        run: npm ci
 
-          - name: Install Frontend Dependencies
-            run: npm ci
+      - name: Verify Clean Next.js Production Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "https://mock-supabase.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "mock-anon-key"
+          FASTAPI_BASE_URL: "http://localhost:8000"
+        run: npm run build
 
-          - name: Verify Clean Next.js Production Build
-            env:
-                NEXT_PUBLIC_SUPABASE_URL: "https://mock-supabase.supabase.co"
-                NEXT_PUBLIC_SUPABASE_ANON_KEY: "mock-anon-key"
-                FASTAPI_BACKEND_URL: "http://localhost:8000"
-            run: npm run build
+  ## =========================================================================
+  ## 3. Docker Build Automation (Buildx Validation & Layer Caching)
+  ## =========================================================================
+  docker-build:
+    name: Docker Build & Compose Check
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          cp .env.example .env
+          docker compose config
+
+      - name: Build Backend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: docintel-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Frontend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: docintel-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=https://mock-supabase.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=mock-anon-key
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

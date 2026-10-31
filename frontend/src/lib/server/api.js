@@ -198,6 +198,47 @@ export async function uploadDocumentToFastAPI(formData) {
 /**
  * Requests temporary pre-signed PDF URL for a document from FastAPI.
  */
+/**
+ * Polls FastAPI for the live status/progress of an asynchronous document ingestion job.
+ */
+export async function fetchDocumentStatusFromFastAPI(documentId) {
+  let token = null;
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    token = session?.access_token || null;
+  } catch (authErr) {
+    // Session token absent
+  }
+
+  const headers = {
+    Accept: 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+
+  const res = await fetch(
+    FASTAPI_BASE_URL + '/api/v1/documents/' + encodeURIComponent(documentId) + '/status',
+    {
+      headers,
+      cache: 'no-store',
+    }
+  );
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ detail: res.statusText }));
+    const error = new Error(errData.detail || 'Status fetch failed with HTTP ' + res.status);
+    error.status = res.status;
+    throw error;
+  }
+
+  return await res.json();
+}
+
 export async function fetchDocumentPdfUrl(documentId) {
   let token = null;
   try {

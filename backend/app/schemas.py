@@ -123,6 +123,18 @@ class DocumentMetadataResponse(BaseModel):
     status: str
     created_at: Optional[str] = None
 
+class DocumentStatusResponse(BaseModel):
+    """Returned by GET /api/v1/documents/{document_id}/status for async ingestion polling."""
+    document_id: str
+    status: str
+    progress: int = Field(default=0, ge=0, le=100)
+    current_step: str = "Processing"
+    total_pages: Optional[int] = 0
+    chunks_ingested: Optional[int] = 0
+    error: Optional[str] = None
+    file_name: Optional[str] = None
+    doc_type: Optional[str] = None
+
 class HealthResponse(BaseModel):
     """Returned by GET /health/ready and GET /health/live."""
     status: str
