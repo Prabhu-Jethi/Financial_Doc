@@ -147,9 +147,11 @@ class EvidenceService:
         for doc in docs:
             doc_id = doc.metadata.get("document_id", "UNKNOWN")
             printed_page = str(doc.metadata.get("printed_page", "N/A"))
-            section = doc.metadata.get("section", "Item 8 - Financial Statements")
-            company = doc.metadata.get("company", "Company")
+            is_sec_doc = "10-k" in str(doc_id).lower() or doc.metadata.get("report_type") == "10-K"
+            section = doc.metadata.get("section") or ("Item 8 - Financial Statements" if is_sec_doc else f"Page {printed_page} Excerpt")
+            company = doc.metadata.get("company") or doc.metadata.get("file_name") or ("SEC Filing" if is_sec_doc else "Uploaded Document")
             report_year = doc.metadata.get("report_fiscal_year") or self._extract_year_from_doc_id(doc_id) or 2024
+            report_type = doc.metadata.get("report_type") or ("10-K" if is_sec_doc else "Document")
             content = doc.page_content
 
             # Check if this document contains an operand or fact mentioned in answer
@@ -169,7 +171,7 @@ class EvidenceService:
                 citation_id=str(doc.metadata.get("chunk_id", f"cite_{doc_id}_p{printed_page}")),
                 company=company,
                 report_year=report_year,
-                report_type=doc.metadata.get("report_type", "10-K"),
+                report_type=report_type,
                 printed_page=printed_page,
                 section=section,
                 exact_quote=exact_quote,

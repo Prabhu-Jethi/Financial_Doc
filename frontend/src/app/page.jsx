@@ -17,8 +17,25 @@ export default function Home() {
   const [question, setQuestion] = useState("");
   const [period, setPeriod] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [history, setHistory] = useState([]);
+  // Instant hydration from localStorage on initial render
+  const [messages, setMessages] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("docintel_active_messages");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [history, setHistory] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("docintel_recent_analyses");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(false);
 
@@ -38,18 +55,48 @@ export default function Home() {
   const [pdfTargetDoc, setPdfTargetDoc] = useState(null);
 
   // Documents
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("docintel_custom_documents");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
   const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [health, setHealth] = useState({ active_engine: "sec_10k_index" });
 
   // Theme State (Dark / Light)
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedTheme = localStorage.getItem("docintel_theme");
+        if (savedTheme === "dark" || savedTheme === "light") return savedTheme;
+      } catch (e) {}
+    }
+    return "light";
+  });
 
   // Application & Search Settings (Persisted to localStorage)
-  const [appSettings, setAppSettings] = useState({
-    retrievalMode: "hybrid",
-    topK: 7,
-    showCitationScore: true,
+  const [appSettings, setAppSettings] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("docintel_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === "object") return parsed;
+        }
+      } catch (e) {}
+    }
+    return {
+      retrievalMode: "hybrid",
+      topK: 7,
+      showCitationScore: true,
+    };
   });
 
   const openModal = (modalName) => {
@@ -66,6 +113,7 @@ export default function Home() {
   useEffect(() => {
     fetchHealth();
     fetchDocuments();
+    fetchUserHistory();
 
     // 1. Initialize and monitor Supabase user session
     try {
@@ -104,6 +152,21 @@ export default function Home() {
     } catch (e) {
       // quiet fallback
     }
+
+    // Hydrate locally saved uploaded documents immediately
+    try {
+      const savedDocs = localStorage.getItem("docintel_custom_documents");
+      if (savedDocs) {
+        const parsedDocs = JSON.parse(savedDocs);
+        if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
+          setDocuments((prev) => {
+            const existingIds = new Set(prev.map((d) => d.document_id));
+            const unique = parsedDocs.filter((d) => !existingIds.has(d.document_id));
+            return [...unique, ...prev];
+          });
+        }
+      }
+    } catch (e) {}
 
     // 3. Responsive initial state: auto-collapse sidebar on smaller screens (<900px)
     if (typeof window !== "undefined" && window.innerWidth < 900) {
@@ -171,16 +234,119 @@ export default function Home() {
     }
   };
 
+  const fetchUserHistory = async () => {
+    try {
+      let fetchedHistory = [];
+      try {
+        const res = await fetch("/api/history");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+            fetchedHistory = data.history;
+          }
+        }
+      } catch (err) {}
+
+      // Direct client-side Supabase query fallback for authenticated users
+      if (fetchedHistory.length === 0) {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: dbHistory, error } = await supabase
+              .from("user_query_history")
+              .select("id, question, company, reporting_periods, answer_text, citations, calculations, timings_ms, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(50);
+
+            if (!error && Array.isArray(dbHistory) && dbHistory.length > 0) {
+              fetchedHistory = dbHistory.map((row) => ({
+                history_id: row.id,
+                question: row.question,
+                company: row.company,
+                period: row.reporting_periods?.[0] || "",
+                reporting_periods: row.reporting_periods || [],
+                timestamp: new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                result: {
+                  question: row.question,
+                  company: row.company,
+                  reporting_periods: row.reporting_periods,
+                  answer_text: row.answer_text,
+                  citations: row.citations || [],
+                  facts: [],
+                  calculations: row.calculations || [],
+                  timings_ms: row.timings_ms || {},
+                  status: "answered",
+                },
+              }));
+            }
+          }
+        } catch (authErr) {}
+      }
+
+      if (fetchedHistory.length > 0) {
+        setHistory(fetchedHistory);
+        try {
+          localStorage.setItem("docintel_recent_analyses", JSON.stringify(fetchedHistory));
+        } catch (e) {}
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  };
+
   const fetchDocuments = async () => {
     try {
-      const res = await fetch("/api/documents");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.documents) {
-          setDocuments(data.documents);
-          if (data.documents.length > 0) {
-            setSelectedDocIds(data.documents.map((d) => d.document_id));
+      let serverDocs = [];
+      try {
+        const res = await fetch("/api/documents");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.documents && Array.isArray(data.documents)) {
+            serverDocs = data.documents;
           }
+        }
+      } catch (e) {}
+
+      // Resilient client-side query to guarantee custom uploaded documents always appear
+      try {
+        const supabase = createClient();
+        const { data: dbDocs, error } = await supabase
+          .from("documents")
+          .select("document_id, company, ticker, report_type, report_fiscal_year, period_ended, filing_date, source_url, file_name, status, created_at, user_id")
+          .order("created_at", { ascending: false });
+
+        if (!error && Array.isArray(dbDocs) && dbDocs.length > 0) {
+          const existingIds = new Set(serverDocs.map((d) => d.document_id));
+          const newFromDb = dbDocs.filter((d) => !existingIds.has(d.document_id));
+          serverDocs = [...serverDocs, ...newFromDb];
+        }
+      } catch (dbErr) {}
+
+      // Merge with locally saved custom documents so nothing vanishes during network delay
+      let localCustom = [];
+      try {
+        localCustom = JSON.parse(localStorage.getItem("docintel_custom_documents") || "[]");
+      } catch (e) {}
+
+      const allServerIds = new Set(serverDocs.map((d) => d.document_id));
+      const fullList = [
+        ...localCustom.filter((cd) => !allServerIds.has(cd.document_id)),
+        ...serverDocs,
+      ];
+
+      if (fullList.length > 0) {
+        setDocuments(fullList);
+
+        // Keep localStorage updated with custom docs
+        const customDocs = fullList.filter(
+          (d) => d.report_type === "general" || d.ticker === "DOC" || d.isCustom || d.document_id?.startsWith("doc_")
+        );
+        if (customDocs.length > 0) {
+          try {
+            localStorage.setItem("docintel_custom_documents", JSON.stringify(customDocs));
+          } catch (e) {}
         }
       }
     } catch (e) {
@@ -189,6 +355,14 @@ export default function Home() {
   };
 
   const handleDocumentUploaded = (newDoc) => {
+    // Persist custom document in localStorage immediately so it never vanishes
+    try {
+      const existing = JSON.parse(localStorage.getItem("docintel_custom_documents") || "[]");
+      const filtered = existing.filter((d) => d.document_id !== newDoc.document_id);
+      const updated = [newDoc, ...filtered];
+      localStorage.setItem("docintel_custom_documents", JSON.stringify(updated));
+    } catch (e) {}
+
     setDocuments((prev) => [newDoc, ...prev.filter((d) => d.document_id !== newDoc.document_id)]);
     setSelectedDocIds([newDoc.document_id]);
     fetchDocuments();
@@ -223,24 +397,36 @@ export default function Home() {
     abortControllerRef.current = new AbortController();
 
     try {
-      // 1. Resolve company context dynamically from question or selected document
-      let queryCompany = "All";
+      // 1. Resolve document scoping and company context
+      let queryCompany = undefined;
       let queryDocId = undefined;
+      let queryDocIds = undefined;
 
       const qLower = q.toLowerCase();
-      if (qLower.includes("microsoft") || qLower.includes("msft")) {
-        queryCompany = "Microsoft Corporation";
-      } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
-        queryCompany = "Amazon.com, Inc.";
-      } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
-        queryCompany = "Meta Platforms, Inc.";
-      } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
-        queryCompany = "Apple Inc.";
-      } else if (selectedDocIds.length === 1) {
-        const selectedDoc = documents.find((d) => d.document_id === selectedDocIds[0]);
-        if (selectedDoc) {
-          queryCompany = selectedDoc.company || "All";
-          queryDocId = selectedDoc.document_id;
+      if (selectedDocIds.length > 0) {
+        // User has explicitly checked one or more documents in the sidebar: STRICT SCOPE
+        queryDocIds = [...selectedDocIds];
+        queryDocId = selectedDocIds[0];
+
+        const selectedDocs = documents.filter((d) => selectedDocIds.includes(d.document_id));
+        const companies = [...new Set(selectedDocs.map((d) => d.company).filter(Boolean))];
+        if (companies.length === 1 && !["General", "General Document", "Uploaded Document"].includes(companies[0])) {
+          queryCompany = companies[0];
+        } else {
+          queryCompany = "All";
+        }
+      } else {
+        // No documents explicitly checked in sidebar: infer target company from keywords across the full corpus
+        if (qLower.includes("microsoft") || qLower.includes("msft")) {
+          queryCompany = "Microsoft Corporation";
+        } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
+          queryCompany = "Amazon.com, Inc.";
+        } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
+          queryCompany = "Meta Platforms, Inc.";
+        } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
+          queryCompany = "Apple Inc.";
+        } else {
+          queryCompany = "All";
         }
       }
 
@@ -252,8 +438,9 @@ export default function Home() {
         },
         body: JSON.stringify({
           question: q,
-          company: queryCompany,
+          company: queryCompany || "All",
           document_id: queryDocId,
+          document_ids: queryDocIds,
           reporting_periods: queryPeriod || period ? [queryPeriod || period] : undefined,
         }),
         signal: abortControllerRef.current.signal,
@@ -280,22 +467,73 @@ export default function Home() {
         return updated;
       });
 
-      // Add to session history (persisted across page reloads)
+      // Add to session history (persisted locally and synced to user account)
+      const newHistoryItem = {
+        question: q,
+        period: queryPeriod || period,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        result: data,
+      };
+
       setHistory((prev) => {
         const updated = [
-          {
-            question: q,
-            period: queryPeriod || period,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            result: data,
-          },
-          ...prev.filter((h) => h.question !== q).slice(0, 24),
+          newHistoryItem,
+          ...prev.filter((h) => h.question !== q).slice(0, 49),
         ];
         try {
           localStorage.setItem("docintel_recent_analyses", JSON.stringify(updated));
         } catch (e) {}
         return updated;
       });
+
+      // Persist permanently in user's cloud account forever (ChatGPT-style)
+      try {
+        fetch("/api/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: q,
+            company: queryCompany || "All",
+            reporting_periods: queryPeriod || period ? [queryPeriod || period] : [],
+            answer_text: data.answer_text,
+            citations: data.citations || [],
+            calculations: data.calculations || [],
+            timings_ms: data.timings_ms || {},
+          }),
+        })
+          .then((r) => r.json())
+          .then((saved) => {
+            if (saved?.item?.id) {
+              setHistory((current) =>
+                current.map((item) =>
+                  item.question === q ? { ...item, history_id: saved.item.id } : item
+                )
+              );
+            }
+          })
+          .catch(() => {});
+
+        // Direct browser client fallback to Supabase table
+        if (currentUser?.id) {
+          const supabase = createClient();
+          supabase
+            .from("user_query_history")
+            .insert([
+              {
+                user_id: currentUser.id,
+                question: q,
+                company: queryCompany || "All",
+                reporting_periods: queryPeriod || period ? [queryPeriod || period] : [],
+                answer_text: data.answer_text,
+                citations: data.citations || [],
+                calculations: data.calculations || [],
+                timings_ms: data.timings_ms || {},
+              },
+            ])
+            .then(() => {})
+            .catch(() => {});
+        }
+      } catch (e) {}
 
       // If response includes citations, set active in inspector
       if (data.citations && data.citations.length > 0) {
@@ -374,7 +612,8 @@ export default function Home() {
     } catch (e) {}
   };
 
-  const handleDeleteHistoryItem = (indexToDelete) => {
+  const handleDeleteHistoryItem = async (indexToDelete) => {
+    const itemToDelete = history[indexToDelete];
     setHistory((prev) => {
       const updated = prev.filter((_, idx) => idx !== indexToDelete);
       try {
@@ -382,12 +621,23 @@ export default function Home() {
       } catch (e) {}
       return updated;
     });
+
+    if (itemToDelete?.history_id) {
+      try {
+        await fetch(`/api/history?id=${encodeURIComponent(itemToDelete.history_id)}`, {
+          method: "DELETE",
+        });
+      } catch (e) {}
+    }
   };
 
-  const handleClearAllHistory = () => {
+  const handleClearAllHistory = async () => {
     setHistory([]);
     try {
       localStorage.removeItem("docintel_recent_analyses");
+    } catch (e) {}
+    try {
+      await fetch("/api/history", { method: "DELETE" });
     } catch (e) {}
   };
 

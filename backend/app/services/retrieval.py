@@ -22,6 +22,7 @@ class FinancialRetriever(BaseRetriever):
     rrf_k: int = 60                 ## Reciprocal Rank Fusion 
     search_mode: str = "hybrid"    ## "hybrid" | "dense" | "lexical"
     document_id: Optional[str] = None
+    document_ids: Optional[List[str]] = None
     company: Optional[str] = None
     min_similarity: float = 0.0
     embedding_service: ModelService = None
@@ -35,25 +36,35 @@ class FinancialRetriever(BaseRetriever):
             self.embedding_service = ModelService(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
     def _build_where_filters(self, query: str) -> tuple[List[str], List[Any]]:
-        ## Reusable SQL where clauses for corpus status, company and year
+        ## Reusable SQL where clauses for corpus status, document scoping, company and year
         where_clauses = [
             "(corpus_version IN (SELECT version_id FROM corpus_versions WHERE status = 'ready') OR corpus_version IS NULL)"
         ]
         params: List[Any] = []
 
-        if self.document_id:
+        # 1. Strict Document Scoping takes absolute priority
+        if self.document_ids and len(self.document_ids) > 0:
+            if len(self.document_ids) == 1:
+                where_clauses.append("document_id = %s")
+                params.append(self.document_ids[0])
+            else:
+                where_clauses.append("document_id = ANY(%s)")
+                params.append(list(self.document_ids))
+        elif self.document_id:
             where_clauses.append("document_id = %s")
             params.append(self.document_id)
-
-        if self.company and self.company not in ["All", "Cross-Company"]:
+        elif self.company and self.company not in ["All", "Cross-Company", "General", "Uploaded Document"]:
             where_clauses.append("document_id IN (SELECT document_id FROM documents WHERE company ILIKE %s)")
             params.append(f"%{self.company}%")
 
-        q_lower = query.lower()
-        if "2024" in q_lower or "fy24" in q_lower or "fy2024" in q_lower:
-            where_clauses.append("(metadata->>'report_fiscal_year' = '2024' OR metadata->>'report_fiscal_year' IS NULL)")
-        elif "2023" in q_lower or "fy23" in q_lower:
-            where_clauses.append("(metadata->>'report_fiscal_year' IN ('2023', '2024'))")
+        # 2. Fiscal year heuristics ONLY apply when not explicitly scoped to document(s)
+        has_doc_scope = bool(self.document_id) or bool(self.document_ids and len(self.document_ids) > 0)
+        if not has_doc_scope:
+            q_lower = query.lower()
+            if "2024" in q_lower or "fy24" in q_lower or "fy2024" in q_lower:
+                where_clauses.append("(metadata->>'report_fiscal_year' = '2024' OR metadata->>'report_fiscal_year' IS NULL)")
+            elif "2023" in q_lower or "fy23" in q_lower:
+                where_clauses.append("(metadata->>'report_fiscal_year' IN ('2023', '2024') OR metadata->>'report_fiscal_year' IS NULL)")
 
         return where_clauses, params
     
@@ -78,6 +89,7 @@ class FinancialRetriever(BaseRetriever):
                 for rank, row in enumerate(cur.fetchall(), start=1):
                     score = float(row[7]) if row[7] is not None else 0.0
                     meta = row[6] if isinstance(row[6], dict) else {}
+                    sec_default = "Item 8 - Financial Statements" if "10-k" in str(row[1]).lower() else "Document Passage"
                     meta.update({
                         "chunk_id": row[0],
                         "document_id": row[1],
@@ -87,7 +99,7 @@ class FinancialRetriever(BaseRetriever):
                         "similarity_score": round(score, 4),
                         "dense_rank": rank,
                         "printed_page": meta.get("printed_page", "N/A"),
-                        "section": meta.get("section", "Item 8 / Item 7"),
+                        "section": meta.get("section") or sec_default,
                     })
                     docs.append(Document(page_content=row[5], metadata=meta))
         return docs
@@ -120,6 +132,7 @@ class FinancialRetriever(BaseRetriever):
                     for rank, row in enumerate(cur.fetchall(), start=1):
                         lexical_score = float(row[7]) if row[7] is not None else 0.0
                         meta = row[6] if isinstance(row[6], dict) else {}
+                        sec_default = "Item 8 - Financial Statements" if "10-k" in str(row[1]).lower() else "Document Passage"
                         meta.update({
                             "chunk_id": row[0],
                             "document_id": row[1],
@@ -129,8 +142,8 @@ class FinancialRetriever(BaseRetriever):
                             "lexical_score": round(lexical_score, 4),
                             "lexical_rank": rank,
                             "printed_page": meta.get("printed_page", "N/A"),
-                            "section": meta.get("section", "Item 8 / Item 7"),
-                    })
+                            "section": meta.get("section") or sec_default,
+                        })
                     docs.append(Document(page_content=row[5], metadata=meta))
         except Exception:
             ## Full-text query encounters an issue, return empty

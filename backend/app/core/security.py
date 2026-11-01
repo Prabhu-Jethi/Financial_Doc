@@ -175,3 +175,19 @@ async def get_current_user(
 
     return verify_supabase_jwt(credentials.credentials)
 
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[AuthenticatedUser]:
+    """
+    Optional authentication dependency. Returns AuthenticatedUser if valid
+    Bearer token provided, or None if unauthenticated / token absent.
+    Does not reject requests with HTTP 401.
+    """
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        return verify_supabase_jwt(credentials.credentials)
+    except Exception:
+        return None

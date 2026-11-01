@@ -72,16 +72,17 @@ class QueryRequest(BaseModel):
     """
     question: str = Field(
         ...,
-        min_length=5,
+        min_length=3,
         max_length=4000,
-        description="Natural language question about Apple 10-K filings."
+        description="Natural language question about financial filings or uploaded documents."
     )
-    company: str = Field(default="Apple Inc.", description="Target company")
+    company: Optional[str] = Field(default=None, description="Target company or 'All'")
     reporting_periods: Optional[List[str]] = Field(
         default=None,
         description="Optional period filters (e.g. ['FY2024'], ['FY2023'])"
     )
     document_id: Optional[str] = Field(None, description="Optional specific document ID filter")
+    document_ids: Optional[List[str]] = Field(None, description="Optional list of specific document IDs")
     model_config = ConfigDict(extra="ignore")
 
 class QueryResponse(BaseModel):
@@ -122,6 +123,7 @@ class DocumentMetadataResponse(BaseModel):
     file_name: str
     status: str
     created_at: Optional[str] = None
+    user_id: Optional[str] = None
 
 class DocumentStatusResponse(BaseModel):
     """Returned by GET /api/v1/documents/{document_id}/status for async ingestion polling."""

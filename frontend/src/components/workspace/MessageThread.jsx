@@ -384,7 +384,7 @@ export default function MessageThread({
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
                     <span>
-                      {item.citations.some(c => c.report_type === "10-K" || ["AAPL", "AMZN", "MSFT", "META"].includes(c.company || c.ticker))
+                      {item.citations.some(c => (c.report_type === "10-K" && !c.document_id?.startsWith("doc_")) || ["AAPL", "AMZN", "MSFT", "META"].includes(c.company || c.ticker))
                         ? `Supporting SEC 10-K Disclosures (${item.citations.length} Citations)`
                         : `Source Document Citations (${item.citations.length})`}
                     </span>
@@ -393,6 +393,7 @@ export default function MessageThread({
                     {item.citations.map((cite, cIdx) => {
                       const citeKey = `${idx}-${cIdx}`;
                       const isHovered = hoveredCitation === citeKey;
+                      const isSecFiling = (cite.report_type === "10-K" && !cite.document_id?.startsWith("doc_")) || ["AAPL", "AMZN", "MSFT", "META"].includes(cite.company || cite.ticker);
                       return (
                         <div
                           key={cIdx}
@@ -404,11 +405,11 @@ export default function MessageThread({
                             type="button"
                             className="citation-interactive-pill"
                             onClick={() => onInspectCitation(cite)}
-                            title={`Click to open Page ${cite.printed_page} excerpt and official SEC filing`}
+                            title={`Click to open Page ${cite.printed_page} excerpt and document view`}
                           >
                             <span className="cite-page-badge">Page {cite.printed_page}</span>
                             <span className="cite-section-label">
-                              {cite.section?.split("-")[0]?.trim() || "Financial Statements"}
+                              {cite.section?.split("-")[0]?.trim() || (isSecFiling ? "Financial Statements" : "Document Excerpt")}
                             </span>
                             <span className="cite-open-icon">↗</span>
                           </button>
@@ -417,11 +418,11 @@ export default function MessageThread({
                           {isHovered && (
                             <div className="citation-hover-popover" role="tooltip">
                               <div className="popover-header">
-                                <span className="popover-badge">SEC Verified Excerpt</span>
+                                <span className="popover-badge">{isSecFiling ? "SEC Verified Excerpt" : "Verified Source Passage"}</span>
                                 <span className="popover-page">Page {cite.printed_page}</span>
                               </div>
                               <div className="popover-quote">
-                                {cite.exact_quote ? `“${cite.exact_quote}”` : "Official SEC filing statement disclosure."}
+                                {cite.exact_quote ? `“${cite.exact_quote}”` : (isSecFiling ? "Official SEC filing statement disclosure." : "Verified passage from document.")}
                               </div>
                               {cite.section && (
                                 <div className="popover-footer">

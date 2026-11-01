@@ -21,10 +21,15 @@ export default function InspectorDrawer({
     activeDocument?.report_type === "general" ||
     docId?.startsWith("doc_");
 
+  const displayCompany =
+    company && !["Document", "General", "Company"].includes(company)
+      ? company
+      : (activeDocument?.file_name || activeCitation?.file_name || "Document");
+
   const title = activeCitation
-    ? `${company} • ${isGeneralDoc ? "Document" : `${year} ${activeCitation.report_type || "10-K"}`}`
+    ? `${displayCompany} • ${isGeneralDoc ? "Document" : `${year} ${activeCitation.report_type || "10-K"}`}`
     : activeDocument
-    ? `${company} • ${isGeneralDoc ? "Document" : `FY${year}`}`
+    ? `${displayCompany} • ${isGeneralDoc ? "Document" : `FY${year}`}`
     : "Document Chunk Inspector";
 
   return (

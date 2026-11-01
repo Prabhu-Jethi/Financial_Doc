@@ -61,7 +61,8 @@ export default function Sidebar({
     (d) =>
       (d.report_type === "10-K" || (d.ticker && ["AAPL", "AMZN", "MSFT", "META"].includes(d.ticker))) &&
       !d.isCustom &&
-      d.report_type !== "general"
+      d.report_type !== "general" &&
+      !d.document_id?.startsWith("doc_")
   );
 
   const uploadedDocs = documents.filter(

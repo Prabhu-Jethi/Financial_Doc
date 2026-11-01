@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File,
 from ...core.config import settings
 from ...integrations.storage import SupabaseStorageService
 from ...integrations.models import ModelService
-from ...core.security import get_current_user, AuthenticatedUser
+from ...core.security import get_current_user, get_optional_user, AuthenticatedUser
 from ...schemas import DocumentMetadataResponse, DocumentStatusResponse
 from ...parsers.factory import ParserFactory
 
@@ -172,13 +172,13 @@ def process_document_background(
 
 
 @router.get("", response_model=List[DocumentMetadataResponse])
-def list_document(user: AuthenticatedUser = Depends(get_current_user)):
+def list_document(user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
     """Lists curated documents accessible to authenticated users."""
     query = """
     SELECT document_id, company, ticker, report_type, report_fiscal_year,
-           period_ended::text, filing_date::text, source_url, file_name, status, created_at::text
+           period_ended::text, filing_date::text, source_url, file_name, status, created_at::text, user_id
     FROM documents
-    ORDER BY report_fiscal_year DESC;
+    ORDER BY created_at DESC;
     """
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
@@ -188,14 +188,15 @@ def list_document(user: AuthenticatedUser = Depends(get_current_user)):
     return [
         DocumentMetadataResponse(
             document_id=r[0], company=r[1], ticker=r[2], report_type=r[3], report_fiscal_year=r[4],
-            period_ended=r[5], filing_date=r[6], source_url=r[7], file_name=r[8], status=r[9], created_at=r[10] 
+            period_ended=r[5], filing_date=r[6], source_url=r[7], file_name=r[8], status=r[9], created_at=r[10],
+            user_id=r[11] if len(r) > 11 else None
         )
             for r in rows
     ]
 
 
 @router.get('/{document_id}/status', response_model=DocumentStatusResponse)
-def get_document_status(document_id: str, user: AuthenticatedUser = Depends(get_current_user)):
+def get_document_status(document_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
     """Pollable endpoint returning live progress of asynchronous document ingestion."""
     # 1. Check in-memory live status
     if document_id in ingestion_status:
@@ -248,7 +249,7 @@ def get_document_status(document_id: str, user: AuthenticatedUser = Depends(get_
 
 
 @router.get('/{document_id}/pdf_url')
-def get_document_pdf_url(document_id: str, user: AuthenticatedUser = Depends(get_current_user)):
+def get_document_pdf_url(document_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
     """Generates signed URL for document PDF. Protected by authentication."""
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
@@ -266,7 +267,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...), 
     doc_type: str = Form("general"), 
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
 ):
     """
     Accepts PDF uploads and dispatches asynchronous background ingestion.
@@ -327,8 +328,8 @@ async def upload_document(
                 """
                 INSERT INTO documents (
                     document_id, company, ticker, report_type, report_fiscal_year,
-                    source_url, file_name, storage_path, file_hash_sha256, status
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    source_url, file_name, storage_path, file_hash_sha256, status, user_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (document_id) DO NOTHING;
                 """, 
                 (
@@ -341,7 +342,8 @@ async def upload_document(
                     file.filename,
                     f"uploads/{doc_id}.pdf",
                     file_hash,
-                    "parsing"
+                    "parsing",
+                    user.user_id if user else None
                 )   
             )
             conn.commit()
@@ -368,7 +370,7 @@ async def upload_document(
         file_name=file.filename,
         doc_type=doc_type,
         file_hash=file_hash,
-        user_id=user.user_id
+        user_id=user.user_id if user else "authenticated_user"
     )
 
     return {

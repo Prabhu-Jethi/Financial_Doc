@@ -1,9 +1,10 @@
 import uuid
 import time
+from typing import Optional
 from fastapi import APIRouter, Header, Depends
 from ...schemas import QueryRequest, QueryResponse
 from ...services.answering import AnswerService
-from ...core.security import get_current_user, AuthenticatedUser
+from ...core.security import get_optional_user, AuthenticatedUser
 
 router = APIRouter(prefix="/query", tags=["Query"])
 
@@ -22,22 +23,23 @@ def get_answering_service() -> AnswerService:
 def execute_query(
     req: QueryRequest,
     x_request_id: str = Header(default=None),
-    user: AuthenticatedUser = Depends(get_current_user),
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
-    Executes audited financial Q&A via AnswerService.
-    Protected endpoint: Requires valid Supabase Bearer token.
-    Extracts verified user_id from token 'sub' claim.
+    Executes audited financial and document Q&A via AnswerService.
+    Supports optional Supabase Bearer token authentication.
     """
     start_time = time.time()
     req_id = x_request_id or f"req_{uuid.uuid4().hex[:8]}"
 
     # Execute audited answering pipeline via lazy-initialized service
     answering_svc = get_answering_service()
+    doc_ids = req.document_ids or ([req.document_id] if req.document_id else None)
     result = answering_svc.answer_query(
         question=req.question,
         company=req.company,
-        document_id=req.document_id
+        document_id=req.document_id,
+        document_ids=doc_ids
     )
 
     elapsed_ms = (time.time() - start_time) * 1000

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchDocumentStatusFromFastAPI } from "../../../../../lib/server/api.js";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // Allow up to 60s for LLM/PDF extraction
 
 export async function GET(request, context) {
   try {

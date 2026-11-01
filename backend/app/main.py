@@ -22,7 +22,7 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-@app.get("/", tags=["Root"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])
 def root():
     return {
         "message": f"Welcome to {settings.app_name}",
@@ -31,7 +31,7 @@ def root():
         "health_check": "/health/ready",
     }
 
-@app.get("/health/live", tags=["Health"])
+@app.api_route("/health/live", methods=["GET", "HEAD"], tags=["Health"])
 def health_live():
     return {"status": "ok", "app": settings.app_name, "version": settings.app_version}
 

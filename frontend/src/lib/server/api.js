@@ -67,6 +67,28 @@ export async function forwardQueryToFastAPI(payload, requestId) {
     clearTimeout(timeoutId);
   }
 
+  // If query targets a specific document or uploaded file, NEVER return generic SEC 10-K answers
+  const isSpecificDoc = Boolean(payload.document_id) || (Array.isArray(payload.document_ids) && payload.document_ids.length > 0);
+  const isNonSecCompany = payload.company && !["Apple Inc.", "Amazon.com, Inc.", "Microsoft Corporation", "Meta Platforms, Inc.", "All"].includes(payload.company);
+
+  if (isSpecificDoc || isNonSecCompany) {
+    const docLabel = payload.company && payload.company !== "All" ? payload.company : "the selected document";
+    return {
+      answer_id: `ans_${Date.now()}`,
+      request_id: requestId,
+      status: "insufficient_evidence",
+      question: payload.question,
+      company: payload.company || "Selected Document",
+      reporting_periods: payload.reporting_periods || [],
+      answer_text: `The backend server is currently connecting to the database or processing ${docLabel}. Please verify your selection and try your query again.`,
+      citations: [],
+      facts: [],
+      calculations: [],
+      missing_information: ["Backend indexing in progress or connection warming up"],
+      engine_mode: "backend_pending",
+    };
+  }
+
   // Verified Local SEC Corpus Fallback
   const fallbackResult = resolveAuditedQuery(payload.question, payload.reporting_periods || []);
   return {
@@ -82,7 +104,7 @@ export async function forwardQueryToFastAPI(payload, requestId) {
 export async function checkFastAPIHealth() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const [liveRes, readyRes] = await Promise.all([
       fetch(`${FASTAPI_BASE_URL}/health/live`, { cache: "no-store", signal: controller.signal }),
@@ -118,7 +140,7 @@ export async function checkFastAPIHealth() {
 export async function fetchDocumentMetadata() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     let token = null;
     try {
@@ -143,10 +165,28 @@ export async function fetchDocumentMetadata() {
     clearTimeout(timeoutId);
 
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
     }
   } catch (e) {
-    // fallback to documents list
+    // fallback to direct database or documents list
+  }
+
+  // Resilient direct database query so uploaded documents ALWAYS load forever
+  try {
+    const supabase = createClient();
+    const { data: dbDocs, error } = await supabase
+      .from("documents")
+      .select("document_id, company, ticker, report_type, report_fiscal_year, period_ended, filing_date, source_url, file_name, status, created_at, user_id")
+      .order("created_at", { ascending: false });
+
+    if (!error && Array.isArray(dbDocs) && dbDocs.length > 0) {
+      return dbDocs;
+    }
+  } catch (dbErr) {
+    console.warn("[Storage] Direct Supabase fallback notice:", dbErr);
   }
 
   return CORPUS_DOCUMENTS;

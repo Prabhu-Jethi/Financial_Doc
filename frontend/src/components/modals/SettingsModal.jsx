@@ -19,20 +19,20 @@ export default function SettingsModal({
     typeof settings?.showCitationScore === "boolean" ? settings.showCitationScore : true
   );
 
-  // Sync saved settings from localStorage or props on mount
+  // Sync saved settings from localStorage or props whenever modal opens or settings change
   useEffect(() => {
     try {
       const saved = localStorage.getItem("docintel_settings");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.retrievalMode) setRetrievalMode(parsed.retrievalMode);
-        if (parsed.topK) setTopK(parsed.topK);
-        if (typeof parsed.showCitationScore === "boolean") setShowCitationScore(parsed.showCitationScore);
+      const active = saved ? JSON.parse(saved) : settings;
+      if (active) {
+        if (active.retrievalMode) setRetrievalMode(active.retrievalMode);
+        if (active.topK) setTopK(active.topK);
+        if (typeof active.showCitationScore === "boolean") setShowCitationScore(active.showCitationScore);
       }
     } catch (e) {
       // quiet fallback
     }
-  }, []);
+  }, [isOpen, settings]);
 
   const handleUpdate = (updatedFields) => {
     try {

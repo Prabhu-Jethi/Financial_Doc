@@ -11,22 +11,19 @@ from ..integrations.models import ModelService
 from ..services.calculations import FinancialCalculator, OperandInput
 from ..schemas import AnswerStatus, Citation, CalculationLedgerItem, CalculationOperand, VerifiedFact
 
-SYSTEM_PROMPT = """You are a senior financial analyst assistant specializing in SEC Form 10-K filings for public corporations (Apple, Amazon, Meta, Microsoft, etc.).
-Answer the user's question using ONLY the provided filing excerpts.
+SYSTEM_PROMPT = """You are an expert document intelligence assistant and financial analyst.
+Answer the user's question using ONLY the provided document excerpts and context.
 
 Rules:
-1. Financial Accuracy: Do not guess or extrapolate numbers. State numbers with exact scale ($ in millions).
-2. Sourced Citations: For every numeric claim, cite the exact printed page and statement (e.g. "Item 8, Page 29").
-3. Comparative Scope: Note that a single annual report (like FY2024 Form 10-K) contains comparative data for prior years (FY23 and FY22).
-4. Insufficient Evidence: If the provided excerpts do not contain the answer, explicitly state: "The provided filings do not contain sufficient evidence to answer this question."
-5. Direct & High-Signal Style for Short Queries: Users often ask terse shorthand questions (e.g. "meta's 2024 fiscal year revenue?", "amazon growth in 2023"). Answer directly in the very first sentence with the exact reported number and units, then provide brief context and page citations. Map common terms accurately:
-   - "revenue" / "sales" -> Total net sales or Revenue line item
-   - "growth" -> State both dollar change and percentage change (e.g. "+$7,750M or +2.02%")
-   - "profit" / "operating profit" -> Operating income
-   - "cash" -> Cash and cash equivalents
-6. Audited Calculations: If the context includes an [AUDITED CALCULATION LEDGER RESULTS] section, you MUST use the exact computed result from the calculation ledger (e.g., 31.51%, +0.30%). Cite the formula, the exact reported operands, and their source pages. DO NOT perform alternative math, recalculate, or round differently.
+1. Strict Factual Grounding: Do not speculate, extrapolate, or guess. Only state facts directly supported by the provided excerpts.
+2. Sourced Citations: For numeric claims or facts, cite the exact printed page and section (e.g. "Page 2" or "Item 8, Page 29").
+3. Comparative Scope: Note that an SEC annual report (Form 10-K) contains comparative data for prior years (FY23 and FY22).
+4. Insufficient Evidence: If the provided excerpts do not contain enough information to answer the question, explicitly state: "The provided document excerpts do not contain sufficient evidence to answer this question."
+5. Document Flexibility: If the document is an SEC Form 10-K, follow standard financial statement analysis conventions. If the document is an uploaded general PDF, research paper, contract, or note, answer directly and accurately based on the contents and text of that document without forcing SEC 10-K terminology.
+6. Direct & High-Signal Style: Answer directly in the very first sentence with the exact answer/figure, then provide brief context and page citations.
+7. Audited Calculations: If the context includes an [AUDITED CALCULATION LEDGER RESULTS] section, you MUST use the exact computed result from the calculation ledger (e.g., 31.51%, +0.30%). Cite the formula, the exact reported operands, and their source pages. DO NOT perform alternative math, recalculate, or round differently.
 
-Context Excerpts from 10-K:
+Context Excerpts:
 {context}
 """
 
@@ -198,7 +195,13 @@ class AnswerService:
                     pass
         return None
 
-    def answer_query(self, question: str, company: Optional[str] = None, document_id: Optional[str] = None):
+    def answer_query(
+        self,
+        question: str,
+        company: Optional[str] = None,
+        document_id: Optional[str] = None,
+        document_ids: Optional[List[str]] = None
+    ):
         ## Configure dynamic retrieval filters (reset per request to prevent cross-query leakage)
         q_lower = question.lower()
         out_of_scope_triggers = [
@@ -208,7 +211,7 @@ class AnswerService:
         ]
         if any(trigger in q_lower for trigger in out_of_scope_triggers):
             return {
-                "answer_text": "I can only provide factual historical financial data and calculations from filed SEC reports. Per policy, I cannot provide investment advice, price predictions, or arbitrary code execution.",
+                "answer_text": "I can only provide factual historical financial data and calculations from filed reports and indexed documents. Per policy, I cannot provide investment advice, price predictions, or arbitrary code execution.",
                 "citations": [],
                 "facts": [],
                 "status": AnswerStatus.OUT_OF_SCOPE,
@@ -218,7 +221,8 @@ class AnswerService:
             }
         
         self.retriever.document_id = document_id if document_id else None
-        if company in ["All", "Cross-Company", None]:
+        self.retriever.document_ids = document_ids if document_ids else ([document_id] if document_id else None)
+        if company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
             self.retriever.company = None
         else:
             self.retriever.company = company
@@ -226,19 +230,22 @@ class AnswerService:
         ## 1. Retrieve evidence documents
         docs: List[Document] = self.retriever.invoke(question)
 
-        # 2. Financial Guardrail: Zero hallucination on empty retrieval
+        # 2. Document Guardrail: Zero hallucination on empty retrieval
         if not docs:
+            scope_desc = "selected document(s)" if (document_id or document_ids) else "provided filings"
             return {
-                "answer_text": "The provided filings do not contain sufficient evidence to answer this question.",
+                "answer_text": f"The {scope_desc} do not contain sufficient evidence to answer this question.",
                 "citations": [],
+                "facts": [],
                 "status": AnswerStatus.INSUFFICIENT_EVIDENCE,
                 "docs": [],
-                "calculations": []
+                "calculations": [],
+                "missing_information": [f"No relevant excerpts found in the {scope_desc} for this question."]
             }
         
         ## 3. Format context string
         context_text = "\n\n---\n\n".join([
-            f"Filing: {d.metadata.get('document_id')} | Page: {d.metadata.get('printed_page')} | Section: {d.metadata.get('section')}\nContent:\n{d.page_content}"
+            f"Document: {d.metadata.get('document_id')} | Page: {d.metadata.get('printed_page')} | Section: {d.metadata.get('section')}\nContent:\n{d.page_content}"
             for d in docs
         ])
 
