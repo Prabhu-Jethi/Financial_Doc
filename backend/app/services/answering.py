@@ -222,7 +222,9 @@ class AnswerService:
         
         self.retriever.document_id = document_id if document_id else None
         self.retriever.document_ids = document_ids if document_ids else ([document_id] if document_id else None)
-        if company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
+        if document_id or (document_ids and len(document_ids) > 0):
+            self.retriever.company = None
+        elif company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
             self.retriever.company = None
         else:
             self.retriever.company = company

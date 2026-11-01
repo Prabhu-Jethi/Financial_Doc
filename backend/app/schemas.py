@@ -76,7 +76,7 @@ class QueryRequest(BaseModel):
         max_length=4000,
         description="Natural language question about financial filings or uploaded documents."
     )
-    company: Optional[str] = Field(default=None, description="Target company or 'All'")
+    company: Optional[str] = Field(default="Apple Inc.", description="Target company or 'All'")
     reporting_periods: Optional[List[str]] = Field(
         default=None,
         description="Optional period filters (e.g. ['FY2024'], ['FY2023'])"
@@ -94,7 +94,7 @@ class QueryResponse(BaseModel):
     request_id: str
     status: AnswerStatus = AnswerStatus.ANSWERED
     question: str
-    company: str = "Apple Inc."
+    company: Optional[str] = "Apple Inc."
     reporting_periods: List[str] = Field(default_factory=list)
     answer_text: str = Field(..., description="Cited natural language explanation")
     # Auditable evidence arrays
