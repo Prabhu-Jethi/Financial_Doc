@@ -105,9 +105,32 @@ export default function Home() {
       // quiet fallback
     }
 
-    // 3. Responsive initial state: auto-collapse sidebar on smaller screens (<900px)
-    if (typeof window !== "undefined" && window.innerWidth < 900) {
-      setSidebarOpen(false);
+    // Hydrate locally saved uploaded documents immediately
+    try {
+      const savedDocs = localStorage.getItem("docintel_custom_documents");
+      if (savedDocs) {
+        const parsedDocs = JSON.parse(savedDocs);
+        if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
+          setDocuments((prev) => {
+            const existingIds = new Set(prev.map((d) => d.document_id));
+            const unique = parsedDocs.filter((d) => !existingIds.has(d.document_id));
+            return [...unique, ...prev];
+          });
+        }
+      }
+    } catch (e) {}
+
+    // 3. Responsive initial state & dynamic resize handler (<=1024px for iPad/tablets/phones)
+    if (typeof window !== "undefined") {
+      if (window.innerWidth <= 1024) {
+        setSidebarOpen(false);
+      }
+      const handleWindowResize = () => {
+        if (window.innerWidth <= 1024) {
+          setSidebarOpen(false);
+        }
+      };
+      window.addEventListener("resize", handleWindowResize);
     }
 
     // 4. Restore persisted conversation history, active thread, and settings from localStorage
@@ -212,8 +235,8 @@ export default function Home() {
     const q = (queryText || question).trim();
     if (!q) return;
 
-    // Auto-dismiss sidebar on small screens when query executes
-    if (typeof window !== "undefined" && window.innerWidth < 900) {
+    // Auto-dismiss sidebar on small/tablet screens when query executes
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
       setSidebarOpen(false);
     }
 
@@ -343,8 +366,8 @@ export default function Home() {
   };
 
   const handleSelectHistory = (hItem) => {
-    // Auto-dismiss sidebar on small screens when history is picked
-    if (typeof window !== "undefined" && window.innerWidth < 900) {
+    // Auto-dismiss sidebar on small/tablet screens when history is picked
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
       setSidebarOpen(false);
     }
 

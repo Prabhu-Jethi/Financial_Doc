@@ -51,7 +51,7 @@ export default function Sidebar({
   }, [userMenuOpen]);
 
   const handleAutoCloseMobile = () => {
-    if (typeof window !== "undefined" && window.innerWidth < 900 && onClose) {
+    if (typeof window !== "undefined" && window.innerWidth <= 1024 && onClose) {
       onClose();
     }
   };
