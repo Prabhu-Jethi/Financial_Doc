@@ -1987,21 +1987,6 @@ body {
   line-height: 1.4;
 }
 
-/* Responsive Styles for Composer */
-@media (max-width: 640px) {
-  .chatgpt-input-dock {
-    bottom: 0.75rem;
-    padding: 0 0.75rem;
-  }
-  .chatgpt-composer-box {
-    border-radius: 18px;
-    padding: 0.65rem 0.75rem 0.55rem 0.75rem;
-  }
-  .chatgpt-footnote-text {
-    font-size: 0.65rem;
-  }
-}
-
 /* ==========================================================================
    Right Inspector Drawer
    ========================================================================== */
@@ -2606,35 +2591,22 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   1. Breakpoint: <= 1024px (Laptops, Landscape Tablets)
+   1. Breakpoint: <= 1024px (Tablets, iPad Mini/Air/Pro, Foldables, Small Laptops)
    -------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
   .conversation-scroll {
-    padding: 1.25rem 1rem 13rem 1rem;
+    padding: 1.15rem 1rem 12.5rem 1rem;
   }
 
   .main-top-bar {
     padding: 0 1rem;
+    height: 52px;
   }
 
   .scope-badge {
-    max-width: 280px;
+    max-width: 240px;
   }
 
-  .webapp-inspector {
-    width: 350px;
-  }
-
-  .pdf-modal-container {
-    width: 94vw;
-    height: 92vh;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   2. Breakpoint: <= 900px (Tablets, Large Foldables, Portrait Tablets)
-   -------------------------------------------------------------------------- */
-@media (max-width: 900px) {
   /* Sidebar as Off-Canvas Drawer */
   .webapp-sidebar {
     position: fixed !important;
@@ -2647,7 +2619,7 @@ body {
     max-width: 86vw !important;
     z-index: 1000 !important;
     transform: translateX(-100%) !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.22) !important;
     opacity: 0;
     pointer-events: none;
@@ -2692,7 +2664,7 @@ body {
     max-width: 92vw !important;
     z-index: 1001 !important;
     transform: translateX(100%) !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
     box-shadow: -8px 0 32px rgba(0, 0, 0, 0.25) !important;
   }
 
@@ -2715,9 +2687,9 @@ body {
     cursor: pointer;
   }
 
-  /* Welcome hero grid collapse */
+  /* Welcome hero grid */
   .welcome-prompt-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   /* PDF Viewer Split Mode Adaptation */
@@ -2739,10 +2711,15 @@ body {
     min-height: 320px;
     width: 100%;
   }
+
+  .pdf-modal-container {
+    width: 94vw;
+    height: 92vh;
+  }
 }
 
 /* --------------------------------------------------------------------------
-   3. Breakpoint: <= 768px (Standard Tablets & Portrait Orientation)
+   2. Breakpoint: <= 768px (Standard Tablets & Portrait iPads)
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
   .main-top-bar {
@@ -2752,8 +2729,12 @@ body {
     gap: 0.5rem;
   }
 
+  .welcome-prompt-grid {
+    grid-template-columns: 1fr;
+  }
+
   .scope-badge {
-    max-width: 200px;
+    max-width: 180px;
     font-size: 0.74rem;
   }
 
@@ -2781,6 +2762,7 @@ body {
     width: calc(100vw - 1.5rem) !important;
     max-width: 100% !important;
     max-height: calc(100vh - 1.5rem) !important;
+    max-height: calc(100dvh - 1.5rem) !important;
     border-radius: 12px !important;
   }
 
@@ -2799,39 +2781,66 @@ body {
     -webkit-overflow-scrolling: touch !important;
     padding: 0.5rem !important;
     gap: 0.4rem !important;
+    scrollbar-width: none;
+  }
+
+  .settings-nav-sidebar::-webkit-scrollbar {
+    display: none;
   }
 
   .settings-nav-item {
     white-space: nowrap !important;
     flex-shrink: 0 !important;
-    padding: 0.4rem 0.75rem !important;
+    padding: 0.45rem 0.8rem !important;
     font-size: 0.76rem !important;
   }
 
   .settings-content-pane {
     padding: 1.1rem !important;
     overflow-y: auto !important;
+    max-height: 60vh;
+    max-height: 60dvh;
   }
 
-  /* Compare Matrix Table Scrolling */
+  /* Compare Matrix Table Scrolling & Sticky First Column */
   .compare-table-wrapper {
     padding: 0.75rem 1rem !important;
     -webkit-overflow-scrolling: touch !important;
+    overflow-x: auto !important;
   }
 
   .compare-benchmark-table {
     min-width: 580px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .compare-benchmark-table th:first-child,
+  .compare-benchmark-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg-surface);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
   }
 }
 
 /* --------------------------------------------------------------------------
-   4. Breakpoint: <= 640px (Mobile Phones - iOS & Android)
+   3. Breakpoint: <= 640px (Mobile Phones - iOS & Android)
    -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
+  /* Prevent any accidental horizontal scroll on root */
+  html, body, .webapp-container {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
   /* Top App Bar */
   .main-top-bar {
     padding: 0 0.65rem;
     gap: 0.45rem;
+    height: 50px;
+    min-height: 50px;
   }
 
   .scope-badge {
@@ -2840,16 +2849,19 @@ body {
     padding: 0.2rem 0.5rem;
   }
 
-  /* Hide text in top action buttons to turn them into sleek icon buttons */
+  /* Hide text in top action buttons to turn them into sleek icon buttons with 36px touch targets */
   .btn-top-action span {
     display: none !important;
   }
 
   .btn-top-action {
     padding: 0.4rem;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
     justify-content: center;
+    touch-action: manipulation;
   }
 
   .btn-top-action svg {
@@ -2863,15 +2875,16 @@ body {
   }
 
   .welcome-title {
-    font-size: 1.4rem;
+    font-size: 1.35rem;
   }
 
   .welcome-subtitle {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   .welcome-prompt-card {
     padding: 0.75rem 0.85rem;
+    touch-action: manipulation;
   }
 
   .prompt-starter-text {
@@ -2884,20 +2897,24 @@ body {
   }
 
   .user-query-bubble {
-    max-width: 92%;
-    padding: 0.6rem 0.85rem;
+    max-width: 90%;
+    padding: 0.65rem 0.9rem;
     font-size: 0.88rem;
     border-radius: 16px 16px 4px 16px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   .assistant-response-container {
     gap: 0.55rem;
+    max-width: 100%;
   }
 
   .assistant-avatar {
     width: 28px;
     height: 28px;
     border-radius: 6px;
+    flex-shrink: 0;
   }
 
   .assistant-avatar svg {
@@ -2908,17 +2925,22 @@ body {
   .assistant-content-card {
     padding: 0.85rem;
     border-radius: 10px;
+    max-width: calc(100% - 36px);
+    overflow-x: hidden;
   }
 
   .response-text-body {
     font-size: 0.88rem;
     line-height: 1.55;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   /* Comparison Section on Mobile */
   .comparison-section-container {
     padding: 0.65rem;
     border-radius: 8px;
+    max-width: 100%;
   }
 
   .table-chart-toggle-bar {
@@ -2948,6 +2970,7 @@ body {
     flex-wrap: wrap;
     gap: 0.35rem;
     font-size: 0.74rem;
+    touch-action: manipulation;
   }
 
   .ledger-formula-row {
@@ -2960,6 +2983,7 @@ body {
     max-width: 100%;
     word-break: break-all;
     font-size: 0.72rem;
+    white-space: pre-wrap;
   }
 
   .ledger-operands-table-wrapper {
@@ -2970,15 +2994,20 @@ body {
   /* Citations Tray */
   .citations-tray {
     padding: 0.75rem 0.85rem;
+    max-width: 100%;
   }
 
   .citations-chips-group {
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.35rem;
   }
 
   .citation-interactive-pill {
     font-size: 0.7rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.28rem 0.55rem;
+    min-height: 28px;
+    touch-action: manipulation;
   }
 
   .cite-section-label {
@@ -3002,8 +3031,10 @@ body {
   }
 
   .btn-tool-action {
-    padding: 0.28rem 0.55rem;
-    font-size: 0.7rem;
+    padding: 0.32rem 0.6rem;
+    font-size: 0.72rem;
+    min-height: 30px;
+    touch-action: manipulation;
   }
 
   .tools-right {
@@ -3011,10 +3042,12 @@ body {
     font-size: 0.66rem;
   }
 
-  /* Floating Chat Composer Dock */
+  /* Floating Chat Composer Dock (Safe Area on iOS Notch / Home Indicator) */
   .chatgpt-input-dock {
-    bottom: 0.5rem;
-    padding: 0 0.5rem;
+    bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+    padding-left: max(0.5rem, env(safe-area-inset-left)) !important;
+    padding-right: max(0.5rem, env(safe-area-inset-right)) !important;
+    padding-top: 0 !important;
   }
 
   .chatgpt-composer-box {
@@ -3022,10 +3055,12 @@ body {
     border-radius: 16px;
   }
 
+  /* CRITICAL FOR iOS SAFARI: font-size 16px prevents automatic browser zooming */
   .chatgpt-textarea {
-    font-size: 0.86rem;
+    font-size: 16px !important;
     min-height: 24px;
     max-height: 90px;
+    line-height: 1.35;
   }
 
   .chatgpt-toolbar-row {
@@ -3037,18 +3072,26 @@ body {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    max-width: calc(100% - 38px);
+    scrollbar-width: none;
+    max-width: calc(100% - 42px);
+  }
+
+  .chatgpt-toolbar-left::-webkit-scrollbar {
+    display: none;
   }
 
   .btn-chatgpt-attach {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
     flex-shrink: 0;
+    touch-action: manipulation;
   }
 
   .chatgpt-corpus-chip {
     max-width: 110px;
-    padding: 0.15rem 0.4rem;
+    padding: 0.18rem 0.45rem;
     flex-shrink: 0;
   }
 
@@ -3062,7 +3105,7 @@ body {
 
   .chatgpt-period-chip {
     max-width: 125px;
-    padding: 0.15rem 0.4rem;
+    padding: 0.18rem 0.45rem;
     flex-shrink: 0;
   }
 
@@ -3072,9 +3115,12 @@ body {
   }
 
   .btn-chatgpt-send {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
     flex-shrink: 0;
+    touch-action: manipulation;
   }
 
   .chatgpt-footnote-text {
@@ -3169,11 +3215,12 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   5. Breakpoint: <= 400px (Compact Mobile Screens - iPhone SE, Fold Clamshell)
+   4. Breakpoint: <= 400px (Compact Mobile Screens - iPhone SE, Fold Clamshell)
    -------------------------------------------------------------------------- */
 @media (max-width: 400px) {
   .main-top-bar {
-    padding: 0 0.5rem;
+    padding: 0 0.45rem;
+    gap: 0.35rem;
   }
 
   .scope-badge {
@@ -3206,6 +3253,54 @@ body {
 
   .btn-highlight-toggle {
     padding: 0.32rem 0.45rem;
+  }
+
+  .btn-top-action {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Landscape Mode on Mobile Devices (Short Viewport)
+   -------------------------------------------------------------------------- */
+@media (max-height: 520px) and (orientation: landscape) {
+  .main-top-bar {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .conversation-scroll {
+    padding-bottom: 7rem;
+  }
+
+  .chatgpt-input-dock {
+    bottom: 0.25rem !important;
+  }
+
+  .chatgpt-textarea {
+    max-height: 60px;
+  }
+
+  .modal-container,
+  .pdf-modal-container,
+  .compare-modal-card,
+  .profile-modal-container,
+  .settings-modal-container,
+  .guide-modal-container {
+    max-height: 96vh !important;
+    max-height: 96dvh !important;
+  }
+
+  .settings-content-pane {
+    max-height: 45vh !important;
+    max-height: 45dvh !important;
+  }
+
+  .evidence-highlighter-pane {
+    max-height: 140px;
   }
 }
 

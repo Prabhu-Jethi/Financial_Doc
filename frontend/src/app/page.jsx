@@ -168,9 +168,17 @@ export default function Home() {
       }
     } catch (e) {}
 
-    // 3. Responsive initial state: auto-collapse sidebar on smaller screens (<900px)
-    if (typeof window !== "undefined" && window.innerWidth < 900) {
-      setSidebarOpen(false);
+    // 3. Responsive initial state & dynamic resize handler (<=1024px for iPad/tablets/phones)
+    if (typeof window !== "undefined") {
+      if (window.innerWidth <= 1024) {
+        setSidebarOpen(false);
+      }
+      const handleWindowResize = () => {
+        if (window.innerWidth <= 1024) {
+          setSidebarOpen(false);
+        }
+      };
+      window.addEventListener("resize", handleWindowResize);
     }
 
     // 4. Restore persisted conversation history, active thread, and settings from localStorage
@@ -386,8 +394,8 @@ export default function Home() {
     const q = (queryText || question).trim();
     if (!q) return;
 
-    // Auto-dismiss sidebar on small screens when query executes
-    if (typeof window !== "undefined" && window.innerWidth < 900) {
+    // Auto-dismiss sidebar on small/tablet screens when query executes
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
       setSidebarOpen(false);
     }
 
@@ -581,8 +589,8 @@ export default function Home() {
   };
 
   const handleSelectHistory = (hItem) => {
-    // Auto-dismiss sidebar on small screens when history is picked
-    if (typeof window !== "undefined" && window.innerWidth < 900) {
+    // Auto-dismiss sidebar on small/tablet screens when history is picked
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
       setSidebarOpen(false);
     }
 

@@ -13,13 +13,23 @@ export default function InspectorDrawer({
   const company = activeCitation?.company || activeDocument?.company || "Document";
   const year = activeCitation?.report_year || activeDocument?.report_fiscal_year || "2024";
   const page = activeCitation?.printed_page || "1";
-  const section = activeCitation?.section || "Document Disclosures";
-  const quote = activeCitation?.exact_quote || "Full document indexed with table cell bounding coordinates.";
-
   const isGeneralDoc =
     activeCitation?.report_type === "general" ||
+    activeCitation?.report_type === "Document" ||
     activeDocument?.report_type === "general" ||
-    docId?.startsWith("doc_");
+    docId?.startsWith("doc_") ||
+    Boolean(company && !["AAPL", "AMZN", "MSFT", "META", "Apple Inc.", "Microsoft Corp.", "Amazon.com Inc.", "Meta Platforms Inc."].includes(company));
+
+  const section =
+    isGeneralDoc && (activeCitation?.section?.includes("Item 8") || activeCitation?.section?.includes("Item 7"))
+      ? `Page ${page} Excerpt`
+      : activeCitation?.section || (isGeneralDoc ? `Page ${page} Excerpt` : "Document Disclosures");
+  const quote = activeCitation?.exact_quote || "Full document indexed with table cell bounding coordinates.";
+
+  const displayCompany =
+    company && !["Document", "General", "Company", "Uploaded Document"].includes(company)
+      ? company
+      : (activeDocument?.file_name || activeCitation?.file_name || "Uploaded Document");
 
   const displayCompany =
     company && !["Document", "General", "Company"].includes(company)
