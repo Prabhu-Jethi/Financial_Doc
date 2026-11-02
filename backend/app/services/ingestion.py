@@ -143,13 +143,16 @@ class FinancialTableExtractor:
             table_id = f"{extracted_page.page_id}-TBL{t_idx+1:02d}"
             headers = [col.replace("\n", " ").strip() if col else f"col_{c}" for c, col in enumerate(raw_table[0])]
 
+            is_sec_doc = "10-k" in str(extracted_page.document_id).lower()
+            section_label = "Item 8 / Item 7" if is_sec_doc else f"Page {extracted_page.printed_page} Table"
+
             tables.append(
                 ExtractedTable(
                     table_id=table_id,
                     document_id=extracted_page.document_id,
                     page_id=extracted_page.page_id,
                     table_name=f"Table on page {extracted_page.printed_page}",
-                    section="Item 8 / Item 7",
+                    section=section_label,
                     printed_page=extracted_page.printed_page,
                     currency="USD",
                     scale="millions",
