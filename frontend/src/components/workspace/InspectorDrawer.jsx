@@ -29,12 +29,7 @@ export default function InspectorDrawer({
   const displayCompany =
     company && !["Document", "General", "Company", "Uploaded Document"].includes(company)
       ? company
-      : (activeDocument?.file_name || activeCitation?.file_name || "Uploaded Document");
-
-  const displayCompany =
-    company && !["Document", "General", "Company"].includes(company)
-      ? company
-      : (activeDocument?.file_name || activeCitation?.file_name || "Document");
+      : (activeDocument?.file_name || activeCitation?.file_name || (isGeneralDoc ? "Uploaded Document" : "Document"));
 
   const title = activeCitation
     ? `${displayCompany} • ${isGeneralDoc ? "Document" : `${year} ${activeCitation.report_type || "10-K"}`}`
