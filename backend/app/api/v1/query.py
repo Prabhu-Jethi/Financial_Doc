@@ -30,7 +30,7 @@ def execute_query(
     Supports optional Supabase Bearer token authentication.
     """
     start_time = time.time()
-    req_id = x_request_id or f"req_{uuid.uuid4().hex[:8]}"
+    req_id = x_request_id if isinstance(x_request_id, str) and x_request_id else f"req_{uuid.uuid4().hex[:8]}"
 
     # Fast-path policy guardrail: short-circuit out-of-scope requests before initializing models
     out_of_scope = check_out_of_scope(req.question)
@@ -40,14 +40,15 @@ def execute_query(
             answer_id=f"ans_{uuid.uuid4().hex[:8]}",
             request_id=req_id,
             status=out_of_scope["status"],
+            question=req.question,
+            company=req.company,
+            reporting_periods=req.reporting_periods or [],
             answer_text=out_of_scope["answer_text"],
             citations=[],
             facts=[],
             calculations=[],
-            missing_information=out_of_scope["missing_information"],
-            grounding_score=1.0,
-            confidence_level="Low",
-            latency_ms=elapsed_ms,
+            missing_information=out_of_scope.get("missing_information", []),
+            timings_ms={"total": round(elapsed_ms, 2)}
         )
 
     # Execute audited answering pipeline via lazy-initialized service
