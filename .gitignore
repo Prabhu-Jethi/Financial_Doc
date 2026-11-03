@@ -34,14 +34,9 @@ frontend/out/
 data/originals/
 *.pdf
 data/parsed/
-docs/
-/src/
-pyproject.toml
 .python-version
 
-
-package-lock.json
-package.json
+docs/
 uv.lock
 
 .next/
