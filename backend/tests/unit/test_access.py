@@ -107,7 +107,10 @@ class TestAccessAndContracts:
         assert response.status_code == 422
 
     def test_query_endpoint_rejects_out_of_scope_trading_advice(self):
-        """POST /api/v1/query must intercept investment/trading advice and return OUT_OF_SCOPE."""
+        """POST /api/v1/query must intercept investment/trading advice and return OUT_OF_SCOPE without initializing models."""
+        from app.api.v1 import query as query_module
+        query_module._answering_service = None
+
         advice_queries = [
             "Should I buy or sell Apple stock?",
             "Is Microsoft stock a good buy right now?",
@@ -121,6 +124,9 @@ class TestAccessAndContracts:
             assert "investment advice" in data["answer_text"].lower()
             assert len(data["citations"]) == 0
             assert len(data["calculations"]) == 0
+
+        # Assert answering service and its embedding models were never instantiated
+        assert query_module._answering_service is None
 
 
 
