@@ -74,6 +74,32 @@ Context:
 Question: {question}
 """
 
+OUT_OF_SCOPE_TRIGGERS = [
+    "buy or sell", "buy/sell", "should i buy", "should i sell", "invest in", 
+    "stock advice", "good buy", "price prediction", "price target", "reach $", 
+    "stock reach", "write a python", "python script", "scrape", "beautifulsoup"
+]
+
+
+def check_out_of_scope(question: str) -> Optional[Dict[str, Any]]:
+    """
+    Lightweight policy guardrail to intercept out-of-scope queries (trading advice,
+    forecasting, arbitrary scripting) before initializing heavy LLM or embedding pipelines.
+    """
+    q_lower = question.lower()
+    if any(trigger in q_lower for trigger in OUT_OF_SCOPE_TRIGGERS):
+        return {
+            "answer_text": "I can only provide factual historical financial data and calculations from filed reports and indexed documents. Per policy, I cannot provide investment advice, price predictions, or arbitrary code execution.",
+            "citations": [],
+            "facts": [],
+            "status": AnswerStatus.OUT_OF_SCOPE,
+            "docs": [],
+            "calculations": [],
+            "missing_information": ["Query requested investment advice, forecasting, or code generation which is out of scope per policy."]
+        }
+    return None
+
+
 class AnswerService:
     def __init__(self, retriever: FinancialRetriever = None, llm: Optional[Any] = None):
         self.retriever = retriever or FinancialRetriever()
@@ -202,23 +228,10 @@ class AnswerService:
         document_id: Optional[str] = None,
         document_ids: Optional[List[str]] = None
     ):
-        ## Configure dynamic retrieval filters (reset per request to prevent cross-query leakage)
-        q_lower = question.lower()
-        out_of_scope_triggers = [
-            "buy or sell", "buy/sell", "should i buy", "should i sell", "invest in", 
-            "stock advice", "good buy", "price prediction", "price target", "reach $", 
-            "stock reach", "write a python", "python script", "scrape", "beautifulsoup"
-        ]
-        if any(trigger in q_lower for trigger in out_of_scope_triggers):
-            return {
-                "answer_text": "I can only provide factual historical financial data and calculations from filed reports and indexed documents. Per policy, I cannot provide investment advice, price predictions, or arbitrary code execution.",
-                "citations": [],
-                "facts": [],
-                "status": AnswerStatus.OUT_OF_SCOPE,
-                "docs": [],
-                "calculations": [],
-                "missing_information": ["Query requested investment advice, forecasting, or code generation which is out of scope per policy."]
-            }
+        ## Fast-path policy check (reuses lightweight helper)
+        out_of_scope = check_out_of_scope(question)
+        if out_of_scope:
+            return out_of_scope
         
         self.retriever.document_id = document_id if document_id else None
         self.retriever.document_ids = document_ids if document_ids else ([document_id] if document_id else None)
