@@ -137,11 +137,19 @@ class FinancialBenchmarkEvaluator:
                 or raw_target_clean in answer_text.replace(",", "")
                 or raw_target_clean in fact_vals
             )
-            # Also check billion equivalent if large number (e.g., 391,035 -> 391.04B)
-            if not found_in_text and len(raw_target_clean) >= 5:
+            # Also check billion equivalent if large number (e.g., 391,035 -> 391.0B, 391.04B, 391.035B)
+            if not found_in_text and len(raw_target_clean) >= 4:
                 try:
-                    dec_b = round(float(raw_target_clean) / 1000.0, 1)
-                    if f"{dec_b}" in answer_text:
+                    target_f = float(raw_target_clean)
+                    b_variants = [
+                        f"{target_f / 1000.0:.1f}",
+                        f"{target_f / 1000.0:.2f}",
+                        f"{target_f / 1000.0:.3f}".rstrip("0").rstrip("."),
+                        f"{round(target_f / 1000.0, 1)}",
+                        f"{round(target_f / 1000.0, 2)}",
+                        f"{round(target_f / 1000.0, 3)}",
+                    ]
+                    if any(bv in answer_text.replace(",", "") for bv in b_variants):
                         found_in_text = True
                 except ValueError:
                     pass
