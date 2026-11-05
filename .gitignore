@@ -35,8 +35,6 @@ data/originals/
 *.pdf
 data/parsed/
 .python-version
-
-docs/
 uv.lock
 
 .next/
