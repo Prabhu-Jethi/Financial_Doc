@@ -224,8 +224,11 @@ class EvidenceService:
         Audits all numbers in answer_text against evidence chunks, calculation ledger, and facts.
         Detects ungrounded numbers / potential hallucinations.
         """
+        # 0. Normalize LaTeX grouping brackets such as 201{,}183 -> 201,183
+        clean_text = answer_text.replace("{,}", ",").replace("{.}", ".")
+
         # 1. Extract all candidate numbers from answer_text
-        raw_number_tokens = re.findall(r"\$?\b\d{1,3}(?:,\d{3})*(?:\.\d+)?%?\b", answer_text)
+        raw_number_tokens = re.findall(r"\$?\b\d{1,3}(?:,\d{3})*(?:\.\d+)?%?\b", clean_text)
 
         # 2. Filter out non-metric entities (e.g., years, page numbers, form numbers)
         financial_numbers: List[str] = []
@@ -244,8 +247,10 @@ class EvidenceService:
             if cleaned in {"0", "1", "2", "3", "4", "7", "8", "10", "12", "100"}:
                 continue
 
-            # Ignore page numbers mentioned in citations (e.g. "page 29", "page 31")
-            if re.search(rf"\bpage\s+{re.escape(cleaned)}\b", answer_text, re.IGNORECASE):
+            # Ignore page and note citations (e.g. "page 29", "Page 31", "Note 10", "Note 2")
+            if re.search(rf"\bpage\s+{re.escape(cleaned)}\b", clean_text, re.IGNORECASE):
+                continue
+            if re.search(rf"\bnote\s+{re.escape(cleaned)}\b", clean_text, re.IGNORECASE):
                 continue
 
             financial_numbers.append(num_token)
@@ -287,28 +292,40 @@ class EvidenceService:
                 or any(clean_num_no_commas == p for p in evidence_pool)
             )
 
-            # Check if it's a billions shorthand (e.g., "$391.04 billion" for 391,035 million)
+            # Check if it's a legitimate scale conversion (e.g., "$391.0B" or "123.216" for 123,216M),
+            # a derived variance difference (A - B), or a rounded calculation percentage
             if not is_found:
                 try:
                     dec_val = Decimal(clean_num_no_commas)
                     ev_decimals = []
-                    # Check if dec_val * 1000 is in evidence (e.g. 391.04B -> 391040M)
                     for ev in evidence_pool:
                         try:
-                            d = Decimal(ev)
-                            if d > 1000:
-                                ev_decimals.append(d)
-                        except InvalidOperation:
-                            pass
-                    for i in range(len(ev_decimals)):
-                        for j in range(i+1, len(ev_decimals)):
-                            if abs(abs(ev_decimals[i] - ev_decimals[j]) - dec_val) < Decimal("0.05"):
+                            clean_ev = str(ev).replace("$", "").replace("%", "").replace(",", "").strip()
+                            ev_dec = Decimal(clean_ev)
+                            if ev_dec > 100:
+                                ev_decimals.append(ev_dec)
+                                # Scale conversion: evidence is in millions, answer token is in billions
+                                scaled_ev = ev_dec / Decimal(1000)
+                                if abs(scaled_ev - dec_val) < Decimal("0.15") or abs(ev_dec - (dec_val * Decimal(1000))) < Decimal("150"):
+                                    is_found = True
+                                    break
+                            # Percentage or small difference tolerance (e.g. 0.30% vs +0.30%)
+                            if abs(ev_dec - dec_val) < Decimal("0.05"):
                                 is_found = True
                                 break
-                        if is_found:
-                            break
-                        
-                except InvalidOperation:
+                        except (InvalidOperation, TypeError):
+                            pass
+                    
+                    # Also check derived differences between document numbers (e.g. 96,169 - 85,200 = 10,969)
+                    if not is_found and len(ev_decimals) >= 2:
+                        for i in range(len(ev_decimals)):
+                            for j in range(i+1, len(ev_decimals)):
+                                if abs(abs(ev_decimals[i] - ev_decimals[j]) - dec_val) < Decimal("0.05"):
+                                    is_found = True
+                                    break
+                            if is_found:
+                                break
+                except (InvalidOperation, TypeError):
                     pass
 
             if is_found:

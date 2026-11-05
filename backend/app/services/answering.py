@@ -22,6 +22,7 @@ Rules:
 5. Document Flexibility: If the document is an SEC Form 10-K, follow standard financial statement analysis conventions. If the document is an uploaded general PDF, research paper, contract, or note, answer directly and accurately based on the contents and text of that document without forcing SEC 10-K terminology.
 6. Direct & High-Signal Style: Answer directly in the very first sentence with the exact answer/figure, then provide brief context and page citations.
 7. Audited Calculations: If the context includes an [AUDITED CALCULATION LEDGER RESULTS] section, you MUST use the exact computed result from the calculation ledger (e.g., 31.51%, +0.30%). Cite the formula, the exact reported operands, and their source pages. DO NOT perform alternative math, recalculate, or round differently.
+8. Exact Reported Units & Scale: For SEC filings, ALWAYS report financial values using the exact scale and raw numbers as filed in the financial tables first (e.g., "$391,035 million" or "$391,035M"), before optionally mentioning billion-scale equivalents. Never output solely converted billion figures without the primary reported table figure.
 
 Context Excerpts:
 {context}

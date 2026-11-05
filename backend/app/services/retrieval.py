@@ -17,8 +17,8 @@ class FinancialRetriever(BaseRetriever):
     3. Reciprocal Rank Fusion (RRF with k=60)
     """
     ## Enforces ready-corpus isolation, similarity ranking, and table metadata recovery.
-    top_k: int = 8
-    candidate_limit: int = 15       ## no. of candidates pulled by each branch before fusion
+    top_k: int = 10
+    candidate_limit: int = 20       ## no. of candidates pulled by each branch before fusion
     rrf_k: int = 60                 ## Reciprocal Rank Fusion 
     search_mode: str = "hybrid"    ## "hybrid" | "dense" | "lexical"
     document_id: Optional[str] = None
