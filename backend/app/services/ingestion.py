@@ -392,7 +392,7 @@ class IngestionPipeline:
     def __init__(self, db_url: str):
         self.repo = IngestionRepository(db_url)
         self.table_extractor = FinancialTableExtractor()
-        self.embedding_service = ModelService(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        self.embedding_service = ModelService()
         self.chunk_builder = ChunkBuilder()
 
     def prepare_corpus(self, version_id: str, description: str):
