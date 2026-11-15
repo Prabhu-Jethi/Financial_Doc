@@ -25,7 +25,7 @@ class MockModelService(ModelService):
         pass
 
     def embed_query(self, query: str):
-        return [0.1] * 384
+        return [0.1] * 1536
 
 
 class TestFinancialRetriever:
