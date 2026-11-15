@@ -51,7 +51,7 @@ def process_document_background(
             ingestion_status[doc_id]["progress"] = 55
             ingestion_status[doc_id]["current_step"] = (
                 f"Extracted {len(parsed_doc.chunks)} sections across {parsed_doc.total_pages} pages. "
-                "Generating 384-dimensional semantic embeddings..."
+                "Generating 1536-dimensional semantic embeddings with text-embedding-3-small..."
             )
             ingestion_status[doc_id]["updated_at"] = time.time()
 
