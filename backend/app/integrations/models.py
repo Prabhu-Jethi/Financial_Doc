@@ -1,20 +1,23 @@
 import os
-from typing import List, Dict, Any, Tuple
-from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpointEmbeddings
-from langchain_openai import ChatOpenAI
+from typing import List, Dict, Any, Optional
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Global singleton cache for embedding models to prevent repeated memory allocations
-_SHARED_EMBEDDINGS: Dict[Tuple[str, str], Any] = {}
-_LOCAL_FALLBACK_CACHE: Dict[Tuple[str, str], Any] = {}
+# Global singleton cache for embedding models to prevent repeated client allocations
+_SHARED_EMBEDDINGS: Dict[str, Any] = {}
 
 
 class ModelService:
+    """
+    Unified Model Service for Financial Document Intelligence.
+    Uses OpenAI text-embedding-3-small (1536-dim) via Experiential Labs or OpenAI API
+    for sub-100ms vector embeddings without local PyTorch memory bloat on Render.
+    """
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        model_name: str = "text-embedding-3-small",
         chat_model: str = "gpt-6-luna",
         device: str = "cpu"
     ):
@@ -22,90 +25,43 @@ class ModelService:
         self.chat_model = chat_model
         self.device = device
 
-        cache_key = (self.model_name, self.device)
-        if cache_key not in _SHARED_EMBEDDINGS:
-            hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-            # Default to local embeddings (use_endpoint = False) for deterministic, sub-20ms latency
-            # Cloud serverless endpoints incur 20-30s cold starts and network timeouts.
-            use_endpoint = os.environ.get("USE_HF_ENDPOINT", "false").lower() in ("true", "1", "yes")
+        if self.model_name not in _SHARED_EMBEDDINGS:
+            api_key = os.environ.get("EXPLABS_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+            base_url = "https://api.experientiallabs.ai/v1" if os.environ.get("EXPLABS_API_KEY") else "https://api.openai.com/v1"
 
-            if hf_token and use_endpoint:
-                try:
-                    print(f"\n Initializing Hugging Face Serverless Endpoint for {self.model_name}...")
-                    _SHARED_EMBEDDINGS[cache_key] = HuggingFaceEndpointEmbeddings(
-                        model=self.model_name,
-                        huggingfacehub_api_token=hf_token,
-                        timeout=5
-                    )
-                    print("Hugging Face Endpoint initialized successfully (Cloud Accelerated).\n")
-                except Exception as ep_err:
-                    print(f"Endpoint init failed ({ep_err}). Falling back to local model.")
+            _SHARED_EMBEDDINGS[self.model_name] = OpenAIEmbeddings(
+                model=self.model_name,
+                openai_api_key=api_key,
+                openai_api_base=base_url,
+                check_embedding_ctx_length=False
+            )
 
-            if cache_key not in _SHARED_EMBEDDINGS:
-                print(f"\n Loading local embedding model {self.model_name} on {self.device}...")
-                try:
-                    # Prefer fast local cache without outbound network checks
-                    _SHARED_EMBEDDINGS[cache_key] = HuggingFaceEmbeddings(
-                        model_name=self.model_name,
-                        model_kwargs={"device": self.device, "trust_remote_code": True, "local_files_only": True},
-                        encode_kwargs={"normalize_embeddings": True},
-                    )
-                except Exception:
-                    # Initial download if not present in local cache
-                    _SHARED_EMBEDDINGS[cache_key] = HuggingFaceEmbeddings(
-                        model_name=self.model_name,
-                        model_kwargs={"device": self.device, "trust_remote_code": True},
-                        encode_kwargs={"normalize_embeddings": True},
-                    )
-                print("Local Embedding Model loaded successfully (Ultra-fast in-memory).\n")
-
-        self.embed = _SHARED_EMBEDDINGS[cache_key]
-
-    def _get_local_fallback(self):
-        cache_key = (self.model_name, self.device)
-        if cache_key not in _LOCAL_FALLBACK_CACHE:
-            try:
-                _LOCAL_FALLBACK_CACHE[cache_key] = HuggingFaceEmbeddings(
-                    model_name=self.model_name,
-                    model_kwargs={"device": self.device, "trust_remote_code": True, "local_files_only": True},
-                    encode_kwargs={"normalize_embeddings": True},
-                )
-            except Exception:
-                _LOCAL_FALLBACK_CACHE[cache_key] = HuggingFaceEmbeddings(
-                    model_name=self.model_name,
-                    model_kwargs={"device": self.device, "trust_remote_code": True},
-                    encode_kwargs={"normalize_embeddings": True},
-                )
-        return _LOCAL_FALLBACK_CACHE[cache_key]
+        self.embed = _SHARED_EMBEDDINGS[self.model_name]
 
     def warmup(self):
-        """Pre-warms the embedding engine so the first live query has zero latency."""
+        """Pre-warms connection to the embedding API so first live query is instantaneous."""
         try:
             self.embed_query("warmup financial intelligence query")
         except Exception:
             pass
 
-    def embed_texts(self, texts: List[str]):
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
         if not texts:
             return []
-        try:
-            return self.embed.embed_documents(texts)
-        except Exception:
-            # Automatic fallback to local engine if cloud endpoint fails
-            return self._get_local_fallback().embed_documents(texts)
+        cleaned = [
+            t.replace("\x00", "").strip() if t and t.replace("\x00", "").strip() else "(empty chunk)"
+            for t in texts
+        ]
+        return self.embed.embed_documents(cleaned)
 
-    def embed_query(self, query: str):
+    def embed_query(self, query: str) -> List[float]:
         if not query or not query.strip():
             raise ValueError("Query string cannot be empty")
-        try:
-            return self.embed.embed_query(query.strip())
-        except Exception:
-            # Automatic fallback to local engine if cloud endpoint fails
-            return self._get_local_fallback().embed_query(query.strip())
+        return self.embed.embed_query(query.strip())
 
     @property
     def dimension(self) -> int:
-        return 384
+        return 1536 if "text-embedding-3" in self.model_name else 384
 
     def get_chat_llm(self, temperature: float = 0.0) -> ChatOpenAI:
         api_key = os.environ.get("EXPLABS_API_KEY", "")
