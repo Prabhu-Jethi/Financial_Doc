@@ -12,7 +12,7 @@ from ..integrations.models import ModelService
 class FinancialRetriever(BaseRetriever):
     """
     Production Hybrid Retriever combining:
-    1. Dense Vector Search (SentenceTransformers MiniLM via pgvector <=>)
+    1. Dense Vector Search (OpenAI text-embedding-3-small via pgvector <=>)
     2. Lexical Full-Text Search (PostgreSQL tsvector via websearch_to_tsquery)
     3. Reciprocal Rank Fusion (RRF with k=60)
     """
@@ -33,7 +33,7 @@ class FinancialRetriever(BaseRetriever):
     def __init__(self, **data):
         super().__init__(**data)
         if not self.embedding_service:
-            self.embedding_service = ModelService(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            self.embedding_service = ModelService()
     
     def _build_where_filters(self, query: str) -> tuple[List[str], List[Any]]:
         ## Reusable SQL where clauses for corpus status, document scoping, company and year
