@@ -38,6 +38,17 @@ export default function ChatInput({
     ? activeDocSummary.replace(" (Multi-Company Corpus)", "").replace(" Active", "")
     : "11 Filings";
 
+  const isCustomScope =
+    activeDocSummary &&
+    !activeDocSummary.includes("Corporate Filings") &&
+    !activeDocSummary.includes("Form 10-K") &&
+    !activeDocSummary.includes("10-K") &&
+    !activeDocSummary.includes("Filings");
+
+  const placeholderText = isCustomScope
+    ? "Ask a question about your selected document(s)..."
+    : "Ask anything about Apple, Microsoft, Amazon, or Meta SEC 10-K filings...";
+
   return (
     <div className="chatgpt-input-dock" role="region" aria-label="Query Composer">
       <div className="chatgpt-input-container">
@@ -47,7 +58,7 @@ export default function ChatInput({
           <textarea
             ref={textareaRef}
             className="chatgpt-textarea"
-            placeholder="Ask anything about Apple, Microsoft, Amazon, or Meta SEC 10-K filings..."
+            placeholder={placeholderText}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyDown}
