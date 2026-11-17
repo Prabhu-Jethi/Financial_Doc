@@ -133,6 +133,14 @@ flowchart TD
 | **DEC-056** | LaTeX Formula Bracket Normalization | Normalized `{,}` to `,` in evidence auditor, preventing mathematical expressions from triggering false ungrounded flags. | Implemented |
 | **DEC-057** | Primary Unit Prompt Enforcement & Retrieval Depth | Added Rule 8 in `answering.py` enforcing primary table units ($M); expanded retrieval to $top\_k=10, limit=20$. | Implemented |
 | **DEC-058** | 100% DEV-20 Empirical Validation | Calibrated multi-precision billion variants, achieving 20/20 (100.0%) pass on DEV benchmark. | Implemented |
+| **DEC-059** | Balanced Multi-Company Retrieval & Quota Partitioning | Added `retrieve_comparative()` in `retrieval.py` and `detect_companies_in_query()` in `answering.py` allocating per-company chunk quotas. | Implemented |
+| **DEC-060** | Optimistic Message Thread & Loading State Skeleton | Rendered pending question bubble immediately on submit and animated status cycling in `MessageThread.jsx`. | Implemented |
+| **DEC-061** | XSS-Safe Markdown Bold Inline Parsing | Added `renderFormattedText()` in `MessageThread.jsx` parsing `**bold**` tokens into `<strong>` elements. | Implemented |
+| **DEC-062** | 2-Column PDF Token Spacing Tolerance | Configured `x_tolerance=1.5, y_tolerance=3, use_text_flow=True` in `gen_pdf_parser.py` preventing concatenated words. | Implemented |
+| **DEC-063** | Physical Page Citation Alignment & Stopword Filtering | Added `source_page` physical index to `Citation` schema and filtered `< 4` char stopwords in `PdfViewerModal.jsx`. | Implemented |
+| **DEC-064** | Dynamic Upload Scope Label & Input Placeholder | Replaced generic `General FY2026 general` label with uploaded filename and switched placeholder dynamically. | Implemented |
+| **DEC-065** | Ticker Filter Row Wrap & Compact Padding | Applied `flex-wrap: wrap; gap: 4px;` in `.company-filter-bar` preventing `META` pill clipping in 260px sidebar. | Implemented |
+| **DEC-066** | PDF Viewer Outline Suppression & Iframe Spinner | Appended `&pagemode=none&navpanes=0` to suppress browser PDF drawer and added centered loading overlay. | Implemented |
 
 ---
 
@@ -177,3 +185,5 @@ flowchart TD
 | 3 Nov 2026 | Universal Tablet & Mobile Polishing | Standardized `<=1024px` drawer threshold, locked iOS Safari font size to 16px, and modernized `README.md`. |
 | 3 Nov 2026 | CI/CD Pipeline Automation & Fast-Path Guardrail | Extracted `check_out_of_scope()` in `query.py` for offline CI execution; merged PR #9 into `main` with 52 tests passing. |
 | 5 Nov 2026 | Scale-Aware Grounding & 100% DEV Benchmark Pass | Upgraded `EvidenceService` with billion-scale conversion and LaTeX normalization; achieved 20/20 (100%) pass on DEV benchmark. |
+| 15 Nov 2026 | OpenAI API Embeddings Migration | Migrated to `text-embedding-3-small` (1536-dim), eliminating PyTorch; reduced container footprint to ~60MB RAM. |
+| 17 Nov 2026 | Engineering Audit & Bug Fixes (v1.9) | Implemented fixes for all 8 audit defects (BUG-001 through BUG-008): balanced comparative retrieval, optimistic loading skeleton, markdown bold rendering, 2-column PDF spacing, physical page citations, dynamic upload scope, ticker wrapping, and PDF outline suppression. Verified with 54 unit tests passing. |

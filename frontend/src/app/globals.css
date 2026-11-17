@@ -454,14 +454,14 @@ body {
 /* Company Filter Chips Bar */
 .company-filter-bar {
   display: flex;
-  gap: 0.25rem;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 4px;
   padding-bottom: 0.2rem;
 }
 
 .company-chip {
-  padding: 0.15rem 0.45rem;
-  font-size: 0.68rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.65rem;
   font-weight: 700;
   font-family: var(--font-mono);
   border-radius: var(--radius-xs);
@@ -470,6 +470,7 @@ body {
   color: var(--text-dim);
   cursor: pointer;
   transition: all var(--trans-fast);
+  white-space: nowrap;
 }
 
 .company-chip:hover {
@@ -6400,3 +6401,129 @@ body {
   color: #60a5fa;
   border-color: rgba(96, 165, 250, 0.35);
 }
+
+/* PDF Iframe Loading Overlay (BUG-008) */
+.pdf-iframe-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.pdf-iframe-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.pdf-iframe-loading-text {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
+}
+
+/* Animated Execution Status Skeleton (BUG-002) */
+.skeleton-loading-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+}
+
+.skeleton-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.skeleton-status-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b82f6;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.skeleton-status-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #3b82f6;
+  letter-spacing: 0.01em;
+}
+
+[data-theme="dark"] .skeleton-status-pill {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+[data-theme="dark"] .skeleton-status-label {
+  color: #93c5fd;
+}
+
+.skeleton-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--border-medium) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s infinite;
+}
+
+.skeleton-line-title {
+  width: 55%;
+  height: 16px;
+}
+
+.skeleton-line-body {
+  width: 90%;
+}
+
+.skeleton-line-short {
+  width: 70%;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}
+

@@ -54,11 +54,11 @@ class GeneralPDFParser(BaseParser):
                                 filtered_page = filtered_page.outside_bbox(table.bbox)
                             except Exception:
                                 pass
-                    remaining_text = filtered_page.extract_text() or ""
+                    remaining_text = filtered_page.extract_text(x_tolerance=1.5, y_tolerance=3, use_text_flow=True) or ""
                 except Exception:
                     # Fallback to standard page text extraction if bbox filtering encounters layout issues
                     try:
-                        remaining_text = page.extract_text() or ""
+                        remaining_text = page.extract_text(x_tolerance=1.5, y_tolerance=3, use_text_flow=True) or ""
                     except Exception:
                         remaining_text = ""
 
