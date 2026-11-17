@@ -399,8 +399,23 @@ export default function Home() {
       setSidebarOpen(false);
     }
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticTurn = {
+      id: tempId,
+      question: q,
+      period: queryPeriod || period,
+      isPending: true,
+    };
+    setMessages((prev) => [...prev, optimisticTurn]);
     setLoading(true);
     setQuestion("");
+
+    // Auto-scroll immediately to show user query bubble & skeleton
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 50);
 
     abortControllerRef.current = new AbortController();
 
@@ -425,14 +440,14 @@ export default function Home() {
         }
       } else {
         // No documents explicitly checked in sidebar: infer target company from keywords across the full corpus
-        if (qLower.includes("microsoft") || qLower.includes("msft")) {
-          queryCompany = "Microsoft Corporation";
-        } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
-          queryCompany = "Amazon.com, Inc.";
-        } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
-          queryCompany = "Meta Platforms, Inc.";
-        } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
-          queryCompany = "Apple Inc.";
+        const mentionedCompanies = [];
+        if (qLower.match(/\b(microsoft|msft|azure)\b/)) mentionedCompanies.push("Microsoft Corporation");
+        if (qLower.match(/\b(amazon|amzn|aws)\b/)) mentionedCompanies.push("Amazon.com, Inc.");
+        if (qLower.match(/\b(meta|reality labs|facebook)\b/)) mentionedCompanies.push("Meta Platforms, Inc.");
+        if (qLower.match(/\b(apple|aapl|iphone|ipad|mac)\b/)) mentionedCompanies.push("Apple Inc.");
+
+        if (mentionedCompanies.length === 1) {
+          queryCompany = mentionedCompanies[0];
         } else {
           queryCompany = "All";
         }
@@ -462,13 +477,15 @@ export default function Home() {
       const data = await res.json();
 
       const newTurn = {
+        id: data.request_id || tempId,
         question: q,
         period: queryPeriod || period,
         ...data,
+        isPending: false,
       };
 
       setMessages((prev) => {
-        const updated = [...prev, newTurn];
+        const updated = prev.map((m) => (m.id === tempId ? newTurn : m));
         try {
           localStorage.setItem("docintel_active_messages", JSON.stringify(updated.slice(-25)));
         } catch (e) {}
@@ -556,16 +573,21 @@ export default function Home() {
       }, 100);
     } catch (err) {
       if (err.name === "AbortError") {
-        // Cancelled
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
       } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            question: q,
-            status: "error",
-            answer_text: `Error retrieving document answer: ${err.message}`,
-          },
-        ]);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? {
+                  id: tempId,
+                  question: q,
+                  status: "error",
+                  answer_text: `Error retrieving document answer: ${err.message}`,
+                  isPending: false,
+                }
+              : m
+          )
+        );
       }
     } finally {
       setLoading(false);
@@ -711,10 +733,15 @@ Quote: "${c.exact_quote}"`
 
   const activeDocCount = selectedDocIds.length;
   const singleDoc = activeDocCount === 1 ? documents.find((d) => d.document_id === selectedDocIds[0]) : null;
+  const isGeneralDoc = (doc) =>
+    doc && (doc.report_type === "general" || doc.doc_type === "general" || doc.company === "General" || doc.document_id?.startsWith("doc_"));
+
   const activeDocSummary = singleDoc
-    ? `${singleDoc.company || "Company"} FY${singleDoc.report_fiscal_year || ""} ${singleDoc.report_type || "10-K"}`
+    ? isGeneralDoc(singleDoc)
+      ? (singleDoc.file_name || singleDoc.filename || singleDoc.title || "Uploaded Document")
+      : `${singleDoc.company || "Company"} FY${singleDoc.report_fiscal_year || ""} ${singleDoc.report_type || "10-K"}`
     : activeDocCount > 1
-    ? `${activeDocCount} Filings Active (Multi-Company Corpus)`
+    ? `${activeDocCount} Documents Active`
     : "All Corporate Filings Active";
 
   return (
