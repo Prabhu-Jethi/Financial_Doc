@@ -22,6 +22,7 @@ class Citation(BaseModel):
     report_year: int = Field(..., description="Fiscal year (e.g. 2024)")
     report_type: str = Field(default="10-K", description="SEC Filing type (10-K, 10-Q)")
     printed_page: str = Field(..., description="Printed page number from PDF footer")
+    source_page: Optional[int] = Field(None, description="1-based physical PDF page index for viewer navigation")
     section: str = Field(..., description="Filing section (e.g. 'Item 8 - Note 12' or 'Item 7 - MD&A')")
     exact_quote: Optional[str] = Field(None, description="Verbatim snippet from narrative or table cell")
     document_id: Optional[str] = None
