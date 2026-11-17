@@ -238,6 +238,46 @@ class TestFinancialRetriever:
         assert any("document_id = %s" in c for c in clauses)
         assert "aapl-2024-10k" in params
 
+    def test_retrieve_comparative_balances_quotas(self):
+        """retrieve_comparative queries each company with balanced top_k and merges chunks."""
+        with patch.object(self.retriever, "_get_relevant_documents") as mock_get_docs:
+            mock_get_docs.side_effect = [
+                [Document(page_content="Amazon AWS chunk", metadata={"chunk_id": "amzn-1", "company": "Amazon"})],
+                [Document(page_content="Meta Reality Labs chunk", metadata={"chunk_id": "meta-1", "company": "Meta"})],
+            ]
+            results = self.retriever.retrieve_comparative(
+                query="Compare Amazon & Meta Revenue Growth FY2024",
+                companies=["Amazon.com, Inc.", "Meta Platforms, Inc."],
+                top_k=10
+            )
+            assert len(results) == 2
+            assert results[0].metadata["chunk_id"] == "amzn-1"
+            assert results[1].metadata["chunk_id"] == "meta-1"
+            assert mock_get_docs.call_count == 2
+            # Verify retriever's company attribute was restored
+            assert self.retriever.company is None
+
+    def test_detect_companies_multi_entity(self):
+        """detect_companies_in_query correctly detects multiple companies in comparative queries."""
+        from app.services.answering import detect_companies_in_query
+        
+        # Multi-company comparison
+        companies = detect_companies_in_query("Compare Amazon & Meta Revenue Growth (FY2024)")
+        assert "Amazon.com, Inc." in companies
+        assert "Meta Platforms, Inc." in companies
+        assert len(companies) == 2
+
+        # Apple vs Microsoft
+        companies2 = detect_companies_in_query("Compare Apple and Microsoft operating margins")
+        assert "Apple Inc." in companies2
+        assert "Microsoft Corporation" in companies2
+
+        # Single company
+        companies3 = detect_companies_in_query("What was Apple's total net sales in FY2024?")
+        assert companies3 == ["Apple Inc."]
+
+
+
 def main():
     print("Running FinancialRetriever Hybrid Search & RRF unit tests with pytest...\n")
     exit_code = pytest.main([__file__, "-v", "--tb=short"])
