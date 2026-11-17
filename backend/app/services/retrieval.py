@@ -206,4 +206,38 @@ class FinancialRetriever(BaseRetriever):
         if not lexical_docs:
             return dense_docs[:self.top_k]
         return self._reciprocal_rank_fusion(dense_docs, lexical_docs)
-    
+
+    def retrieve_comparative(self, query: str, companies: List[str], top_k: int = 10) -> List[Document]:
+        """
+        Executes a balanced comparative retrieval across multiple companies/tickers.
+        Ensures each company receives an allocated quota (e.g., 5 chunks for Amazon + 5 chunks for Meta)
+        so that high lexical density in one company does not starve or drop the other.
+        """
+        if not companies:
+            return self._get_relevant_documents(query)
+
+        per_company_k = max(4, top_k // len(companies))
+        merged_chunks: List[Document] = []
+        original_company = self.company
+        original_top_k = self.top_k
+        try:
+            self.top_k = per_company_k
+            for comp in companies:
+                self.company = comp
+                comp_chunks = self._get_relevant_documents(query)
+                merged_chunks.extend(comp_chunks)
+        finally:
+            self.company = original_company
+            self.top_k = original_top_k
+
+        # Deduplicate while preserving rank order
+        seen_cids = set()
+        deduped: List[Document] = []
+        for doc in merged_chunks:
+            cid = doc.metadata.get("chunk_id")
+            if cid and cid not in seen_cids:
+                seen_cids.add(cid)
+                deduped.append(doc)
+            elif not cid:
+                deduped.append(doc)
+        return deduped
