@@ -17,7 +17,7 @@ Answer the user's question using ONLY the provided document excerpts and context
 Rules:
 1. Strict Factual Grounding: Do not speculate, extrapolate, or guess. Only state facts directly supported by the provided excerpts.
 2. Sourced Citations: For numeric claims or facts, cite the exact printed page and section (e.g. "Page 2" or "Item 8, Page 29").
-3. Comparative Scope: Note that an SEC annual report (Form 10-K) contains comparative data for prior years (FY23 and FY22).
+3. Comparative Scope: Note that an SEC annual report (Form 10-K) contains comparative data for prior years (FY23 and FY22). When comparing multiple companies, report and cite the reported metrics for each company based on the provided excerpts before comparing them.
 4. Insufficient Evidence: If the provided excerpts do not contain enough information to answer the question, explicitly state: "The provided document excerpts do not contain sufficient evidence to answer this question."
 5. Document Flexibility: If the document is an SEC Form 10-K, follow standard financial statement analysis conventions. If the document is an uploaded general PDF, research paper, contract, or note, answer directly and accurately based on the contents and text of that document without forcing SEC 10-K terminology.
 6. Direct & High-Signal Style: Answer directly in the very first sentence with the exact answer/figure, then provide brief context and page citations.
@@ -99,6 +99,27 @@ def check_out_of_scope(question: str) -> Optional[Dict[str, Any]]:
             "missing_information": ["Query requested investment advice, forecasting, or code generation which is out of scope per policy."]
         }
     return None
+
+
+COMPANY_ENTITIES = [
+    ("Amazon.com, Inc.", ["amazon", "amzn", "aws"]),
+    ("Meta Platforms, Inc.", ["meta", "meta platforms", "facebook", "reality labs"]),
+    ("Apple Inc.", ["apple", "aapl", "iphone", "ipad", "mac"]),
+    ("Microsoft Corporation", ["microsoft", "msft", "azure", "intelligent cloud"]),
+]
+
+
+def detect_companies_in_query(query: str) -> List[str]:
+    """Detects all canonical company entities explicitly or implicitly mentioned in the query."""
+    q_lower = query.lower()
+    matched = []
+    for canonical_name, aliases in COMPANY_ENTITIES:
+        for alias in aliases:
+            pattern = r"\b" + re.escape(alias) + r"\b"
+            if re.search(pattern, q_lower):
+                matched.append(canonical_name)
+                break
+    return matched
 
 
 class AnswerService:
@@ -233,18 +254,31 @@ class AnswerService:
         out_of_scope = check_out_of_scope(question)
         if out_of_scope:
             return out_of_scope
-        
-        self.retriever.document_id = document_id if document_id else None
-        self.retriever.document_ids = document_ids if document_ids else ([document_id] if document_id else None)
-        if document_id or (document_ids and len(document_ids) > 0):
-            self.retriever.company = None
-        elif company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
-            self.retriever.company = None
-        else:
-            self.retriever.company = company
+
+        # Detect mentioned companies in question for multi-company comparisons
+        has_explicit_doc_scope = bool(document_id) or bool(document_ids and len(document_ids) > 0)
+        detected_companies = detect_companies_in_query(question)
 
         ## 1. Retrieve evidence documents
-        docs: List[Document] = self.retriever.invoke(question)
+        if not has_explicit_doc_scope and len(detected_companies) > 1:
+            # Comparative retrieval ensures balanced representation across all mentioned companies
+            docs: List[Document] = self.retriever.retrieve_comparative(
+                question, companies=detected_companies, top_k=10
+            )
+        else:
+            self.retriever.document_id = document_id if document_id else None
+            self.retriever.document_ids = document_ids if document_ids else ([document_id] if document_id else None)
+            if has_explicit_doc_scope:
+                self.retriever.company = None
+            elif company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
+                if len(detected_companies) == 1:
+                    self.retriever.company = detected_companies[0]
+                else:
+                    self.retriever.company = None
+            else:
+                self.retriever.company = company
+
+            docs: List[Document] = self.retriever.invoke(question)
 
         # 2. Document Guardrail: Zero hallucination on empty retrieval
         if not docs:
