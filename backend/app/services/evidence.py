@@ -166,6 +166,24 @@ class EvidenceService:
                 continue
             seen_citations.add(cite_key)
 
+            # Resolve 1-based physical PDF page index for viewer navigation
+            source_page = doc.metadata.get("page_number") or doc.metadata.get("physical_page")
+            if not source_page and doc.metadata.get("page_id"):
+                p_match = re.search(r"[-_]P?(\d+)", str(doc.metadata.get("page_id")), re.IGNORECASE)
+                if p_match:
+                    source_page = int(p_match.group(1))
+            if not source_page and doc.metadata.get("chunk_id"):
+                p_match = re.search(r"[-_]p(\d+)", str(doc.metadata.get("chunk_id")), re.IGNORECASE)
+                if p_match:
+                    source_page = int(p_match.group(1))
+            if not source_page:
+                try:
+                    p_clean = re.sub(r"\D", "", printed_page)
+                    if p_clean:
+                        source_page = int(p_clean)
+                except Exception:
+                    source_page = None
+
             # Create citation
             citation = Citation(
                 citation_id=str(doc.metadata.get("chunk_id", f"cite_{doc_id}_p{printed_page}")),
@@ -173,6 +191,7 @@ class EvidenceService:
                 report_year=report_year,
                 report_type=report_type,
                 printed_page=printed_page,
+                source_page=source_page,
                 section=section,
                 exact_quote=exact_quote,
                 document_id=doc_id,
