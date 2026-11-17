@@ -22,6 +22,14 @@ export function useChat({ documents = [], selectedDocIds = [] } = {}) {
       const q = (queryText || question).trim();
       if (!q) return;
 
+      const tempId = `temp-${Date.now()}`;
+      const optimisticUserMsg = {
+        id: tempId,
+        question: q,
+        period: queryPeriod || period,
+        isPending: true,
+      };
+      setMessages((prev) => [...prev, optimisticUserMsg]);
       setLoading(true);
       setQuestion("");
 
@@ -33,20 +41,22 @@ export function useChat({ documents = [], selectedDocIds = [] } = {}) {
         let queryDocId = undefined;
 
         const qLower = q.toLowerCase();
-        if (qLower.includes("microsoft") || qLower.includes("msft")) {
-          queryCompany = "Microsoft Corporation";
-        } else if (qLower.includes("amazon") || qLower.includes("amzn") || qLower.includes("aws")) {
-          queryCompany = "Amazon.com, Inc.";
-        } else if (qLower.includes("meta") || qLower.includes("reality labs")) {
-          queryCompany = "Meta Platforms, Inc.";
-        } else if (qLower.includes("apple") || qLower.includes("iphone") || qLower.includes("ipad") || qLower.includes("mac")) {
-          queryCompany = "Apple Inc.";
+        const mentionedCompanies = [];
+        if (qLower.match(/\b(microsoft|msft|azure)\b/)) mentionedCompanies.push("Microsoft Corporation");
+        if (qLower.match(/\b(amazon|amzn|aws)\b/)) mentionedCompanies.push("Amazon.com, Inc.");
+        if (qLower.match(/\b(meta|reality labs|facebook)\b/)) mentionedCompanies.push("Meta Platforms, Inc.");
+        if (qLower.match(/\b(apple|aapl|iphone|ipad|mac)\b/)) mentionedCompanies.push("Apple Inc.");
+
+        if (mentionedCompanies.length === 1) {
+          queryCompany = mentionedCompanies[0];
         } else if (selectedDocIds.length === 1) {
           const selectedDoc = documents.find((d) => d.document_id === selectedDocIds[0]);
           if (selectedDoc) {
             queryCompany = selectedDoc.company || "All";
             queryDocId = selectedDoc.document_id;
           }
+        } else {
+          queryCompany = "All";
         }
 
         const res = await fetch("/api/query", {
@@ -72,12 +82,16 @@ export function useChat({ documents = [], selectedDocIds = [] } = {}) {
         const data = await res.json();
 
         const newTurn = {
+          id: data.request_id || tempId,
           question: q,
           period: queryPeriod || period,
           ...data,
+          isPending: false,
         };
 
-        setMessages((prev) => [...prev, newTurn]);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? newTurn : m))
+        );
 
         // Add to session history
         setHistory((prev) => [
@@ -97,14 +111,21 @@ export function useChat({ documents = [], selectedDocIds = [] } = {}) {
         return data;
       } catch (err) {
         if (err.name !== "AbortError") {
-          setMessages((prev) => [
-            ...prev,
-            {
-              question: q,
-              status: "error",
-              answer_text: `Error retrieving document answer: ${err.message}`,
-            },
-          ]);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? {
+                    id: tempId,
+                    question: q,
+                    status: "error",
+                    answer_text: `Error retrieving document answer: ${err.message}`,
+                    isPending: false,
+                  }
+                : m
+            )
+          );
+        } else {
+          setMessages((prev) => prev.filter((m) => m.id !== tempId));
         }
       } finally {
         setLoading(false);
