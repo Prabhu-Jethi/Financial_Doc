@@ -14,6 +14,7 @@ export default function PdfViewerModal({
   const [highlightActive, setHighlightActive] = useState(true);
   const [viewMode, setViewMode] = useState("split"); // "split" | "pdf" | "text"
   const [searchPhrase, setSearchPhrase] = useState("");
+  const [iframeLoading, setIframeLoading] = useState(true);
 
   const docId = citation?.document_id || activeDoc?.document_id || "AAPL-10K-2024";
   const company = citation?.company || activeDoc?.company || "Document";
@@ -26,14 +27,18 @@ export default function PdfViewerModal({
     docId?.startsWith("doc_");
 
   // Extract clean search phrase from verbatim quote for PDF reader search/highlight
+  // Filters out short words (< 4 characters) and common stopwords to prevent spurious highlights like "in"
   useEffect(() => {
     if (exactQuote) {
       const clean = exactQuote
         .replace(/[*_#`~"'{}\[\]]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
-      const words = clean.split(" ").filter((w) => w.length > 2);
-      // Take first 4-5 distinctive words
+      const STOPWORDS = new Set(["the", "and", "for", "with", "that", "this", "from", "were", "been", "have", "item", "page", "what", "which", "will", "they", "their"]);
+      const words = clean
+        .split(" ")
+        .filter((w) => w.length >= 4 && !STOPWORDS.has(w.toLowerCase()));
+      // Take first 3-4 distinctive terms
       const phrase = words.slice(0, 4).join(" ");
       setSearchPhrase(phrase);
       setViewMode("split");
@@ -44,8 +49,12 @@ export default function PdfViewerModal({
   }, [exactQuote]);
 
   // Extract initial target page when citation changes
+  // Uses physical source_page index first to eliminate Form 10-K cover/TOC page offsets
   useEffect(() => {
-    if (citation?.printed_page) {
+    const physicalPage = citation?.source_page || citation?.physical_page;
+    if (physicalPage && !isNaN(parseInt(physicalPage, 10))) {
+      setCurrentPage(parseInt(physicalPage, 10));
+    } else if (citation?.printed_page) {
       const match = String(citation.printed_page).match(/\d+/);
       if (match) {
         setCurrentPage(parseInt(match[0], 10));
@@ -55,7 +64,12 @@ export default function PdfViewerModal({
     } else {
       setCurrentPage(1);
     }
+    setIframeLoading(true);
   }, [citation]);
+
+  useEffect(() => {
+    setIframeLoading(true);
+  }, [docId, currentPage]);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -70,9 +84,11 @@ export default function PdfViewerModal({
 
   if (!isOpen) return null;
 
-  // Build PDF URL with native search/highlight parameter when highlight is active
+  // Build PDF URL:
+  // - &pagemode=none&navpanes=0 suppresses Chromium's PDF outline/drawer by default
+  // - &search highlights verified keyword without "in" stopwords
   const searchParam = highlightActive && searchPhrase ? `&search=${encodeURIComponent(searchPhrase)}` : "";
-  const pdfUrl = `/api/documents/${encodeURIComponent(docId)}/pdf#page=${currentPage}${searchParam}&view=FitH`;
+  const pdfUrl = `/api/documents/${encodeURIComponent(docId)}/pdf#page=${currentPage}${searchParam}&pagemode=none&navpanes=0&view=FitH`;
 
   const handleCopyQuote = () => {
     if (!exactQuote) return;
@@ -386,11 +402,20 @@ export default function PdfViewerModal({
                 </div>
               )}
 
+              {/* Centered loading spinner overlay until iframe loads */}
+              {iframeLoading && (
+                <div className="pdf-iframe-loading-overlay">
+                  <div className="pdf-iframe-spinner" />
+                  <span className="pdf-iframe-loading-text">Loading verified PDF page...</span>
+                </div>
+              )}
+
               <iframe
                 key={`${docId}-p${currentPage}-${highlightActive ? "hl" : "plain"}`}
                 src={pdfUrl}
                 title={`${company} FY${year} - Page ${currentPage}`}
                 className="pdf-iframe"
+                onLoad={() => setIframeLoading(false)}
               />
             </div>
           )}
