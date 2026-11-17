@@ -1,8 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FinancialChart from "./FinancialChart";
 import { exportFinancialModelToExcel } from "../../lib/exportExcel";
+
+const LOADING_STAGES = [
+  "Running Hybrid Search (Dense HNSW + Lexical RRF)...",
+  "Verifying operands in Decimal Ledger...",
+  "Auditing page citations...",
+];
+
+function ExecutionStatusSkeleton() {
+  const [stageIdx, setStageIdx] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStageIdx((prev) => (prev + 1) % LOADING_STAGES.length);
+    }, 2800);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="skeleton-loading-container" role="status" aria-live="polite">
+      <div className="skeleton-status-pill">
+        <span className="skeleton-status-indicator" />
+        <span className="skeleton-status-label">{LOADING_STAGES[stageIdx]}</span>
+      </div>
+      <div className="skeleton-card-body">
+        <div className="skeleton-line skeleton-line-title" />
+        <div className="skeleton-line skeleton-line-body" />
+        <div className="skeleton-line skeleton-line-short" />
+      </div>
+    </div>
+  );
+}
+
+function renderFormattedText(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={idx} className="font-semibold text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
 
 const STARTER_PROMPTS = [
   {
@@ -101,7 +147,7 @@ export default function MessageThread({
   };
 
   // Welcome Hero
-  if (messages.length === 0) {
+  if (messages.length === 0 && !loading) {
     return (
       <div className="welcome-hero">
         <div className="welcome-icon-box" aria-hidden="true">
@@ -181,10 +227,13 @@ export default function MessageThread({
               </svg>
             </div>
 
-            <div className="assistant-content-card">
-              {/* 1. Readable Narrative Answer */}
-              <div className="response-text-body">
-                <div className="answer-prose">{item.answer_text}</div>
+            {item.isPending ? (
+              <ExecutionStatusSkeleton />
+            ) : (
+              <div className="assistant-content-card">
+                {/* 1. Readable Narrative Answer */}
+                <div className="response-text-body">
+                  <div className="answer-prose">{renderFormattedText(item.answer_text)}</div>
 
                 {/* Missing information warning if any */}
                 {item.missing_information && item.missing_information.length > 0 && (
@@ -518,26 +567,21 @@ export default function MessageThread({
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       ))}
 
-      {/* Loading state indicator */}
-      {loading && (
+      {/* Fallback loading indicator when loading and no pending message exists */}
+      {loading && !messages.some((m) => m.isPending) && (
         <div className="assistant-response-container">
           <div className="assistant-avatar" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
             </svg>
           </div>
-          <div className="assistant-content-card" style={{ padding: "1.1rem 1.4rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div className="spinner-circle" />
-              <span style={{ fontSize: "0.85rem", color: "var(--c-charcoal)", fontWeight: 500 }}>
-                Retrieving document chunks & extracting disclosed figures...
-              </span>
-            </div>
-          </div>
+          <ExecutionStatusSkeleton />
         </div>
       )}
     </div>
