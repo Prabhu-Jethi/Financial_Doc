@@ -56,22 +56,28 @@ export default function Sidebar({
     }
   };
 
-  // Separate SEC 10-K Filings from User-Uploaded General Documents
+  // Separate Built-in Corporate Filings (SEC 10-K) from User-Uploaded Documents
+  // Built-in benchmark corporate filings: only curated SEC 10-K filings (Apple, Amazon, Microsoft, Meta)
   const secDocs = documents.filter(
     (d) =>
-      (d.report_type === "10-K" || (d.ticker && ["AAPL", "AMZN", "MSFT", "META"].includes(d.ticker))) &&
       !d.isCustom &&
-      d.report_type !== "general" &&
-      !d.document_id?.startsWith("doc_")
+      d.source_url !== "user_upload" &&
+      !d.document_id?.startsWith("doc_") &&
+      !d.user_id &&
+      (d.report_type === "10-K" || (d.ticker && ["AAPL", "AMZN", "MSFT", "META"].includes(d.ticker)))
   );
 
-  const uploadedDocs = documents.filter(
-    (d) =>
-      d.report_type === "general" ||
-      d.ticker === "DOC" ||
-      d.isCustom ||
-      d.document_id?.startsWith("doc_")
-  );
+  // Uploaded Documents: Strictly empty for new or guest users.
+  // For authenticated users, strictly their own uploaded documents regardless of doc type (general, SEC 10-K, etc.).
+  const uploadedDocs = !currentUser
+    ? []
+    : documents.filter(
+        (d) =>
+          d.isCustom ||
+          d.source_url === "user_upload" ||
+          d.document_id?.startsWith("doc_") ||
+          (d.user_id && d.user_id === currentUser.id)
+      );
 
   const filteredSecDocs = secDocs.filter((doc) => {
     if (activeCompanyFilter === "All") return true;
@@ -129,21 +135,24 @@ export default function Sidebar({
     }
   };
 
+  const isGuest = !currentUser;
   const userFullName =
     currentUser?.user_metadata?.full_name ||
     currentUser?.email?.split("@")[0] ||
-    "Donald Trump";
+    "Guest Explorer";
 
-  const userInitials = userFullName
+  const userInitials = isGuest
+    ? "GE"
+    : userFullName
     ? userFullName
         .split(/\s+/)
         .map((n) => n[0])
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "DT";
+    : "GE";
 
-  const userRole = currentUser?.user_metadata?.role || "Pro Analyst";
+  const userRole = isGuest ? "Explore Mode" : (currentUser?.user_metadata?.role || "Pro Analyst");
 
   return (
     <aside className={`webapp-sidebar ${isOpen ? "open" : ""}`} aria-label="Application Sidebar">
@@ -436,7 +445,11 @@ export default function Sidebar({
               {/* Uploaded Documents List */}
               {uploadedDocs.length === 0 ? (
                 <div className="history-empty-state" style={{ padding: "0.5rem 0.25rem", textAlign: "center" }}>
-                  <span>No uploaded documents yet. Upload a PDF contract, invoice, or note to parse.</span>
+                  <span>
+                    {!currentUser
+                      ? "No uploaded documents. Sign in to upload custom PDFs or filings."
+                      : "No uploaded documents yet. Upload your own documents to analyze."}
+                  </span>
                 </div>
               ) : (
                 <div className="compact-doc-list">
@@ -726,8 +739,22 @@ export default function Sidebar({
               </svg>
             </button>
 
-            {/* Log Out */}
-            {onSignOut && (
+            {/* Log Out / Sign In */}
+            {isGuest ? (
+              <a
+                href="/login"
+                className="chatgpt-popover-item"
+                style={{ color: "var(--brand-primary, #2563eb)", fontWeight: 500 }}
+                role="menuitem"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                <span>Sign in / Sign up</span>
+              </a>
+            ) : onSignOut ? (
               <button
                 type="button"
                 className="chatgpt-popover-item logout-item"
@@ -744,7 +771,7 @@ export default function Sidebar({
                 </svg>
                 <span>Log out</span>
               </button>
-            )}
+            ) : null}
           </div>
         )}
 

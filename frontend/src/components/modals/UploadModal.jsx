@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 
-export default function UploadModal({ isOpen, onClose, onDocumentUploaded }) {
+export default function UploadModal({ isOpen, onClose, onDocumentUploaded, currentUser }) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [companyName, setCompanyName] = useState("");
@@ -184,6 +184,7 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded }) {
               page_count: st.total_pages || 1,
               chunks_ingested: st.chunks_ingested || 0,
               isCustom: true,
+              user_id: currentUser?.id || null,
             };
 
             setTimeout(() => {
@@ -227,6 +228,96 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded }) {
       setUploadError(err.message || "Failed to upload document. Please try again.");
     }
   };
+
+  if (!currentUser) {
+    return (
+      <div className="upload-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+        <div className="upload-modal-card auth-modal-card" onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="upload-modal-header">
+            <div className="upload-modal-header-left">
+              <div className="upload-badge-icon auth-lock-badge">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="upload-modal-title">Sign In Required for Custom Uploads</h3>
+                <p className="upload-modal-subtitle">
+                  Unlock private PDF ingestion, table extraction, and dedicated vector indexing
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn-upload-close"
+              onClick={onClose}
+              title="Close modal"
+              aria-label="Close"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Modal Body with Auth Prompt Card */}
+          <div className="upload-modal-body">
+            <div className="auth-prompt-card">
+              <div className="auth-prompt-header">
+                <div className="auth-mode-pill">Guest Explorer Mode</div>
+                <h4 className="auth-prompt-title">Explore SEC Filings Free, or Sign In to Upload</h4>
+                <p className="auth-prompt-description">
+                  You are currently exploring in <strong>Guest Mode</strong> with full, unrestricted access to all 4 pre-indexed SEC Form 10-K filings (Apple, Microsoft, Amazon, Meta), complete with audited citation provenance, calculation ledgers, and multi-company matrices.
+                </p>
+              </div>
+
+              <div className="auth-perks-container">
+                <div className="auth-perk-item">
+                  <div className="auth-perk-check">✓</div>
+                  <div>
+                    <strong>Upload Custom Financial PDFs</strong>
+                    <p>Invoices, vendor agreements, 8-K disclosures, and private notes up to 30MB.</p>
+                  </div>
+                </div>
+                <div className="auth-perk-item">
+                  <div className="auth-perk-check">✓</div>
+                  <div>
+                    <strong>Automatic Table Extraction &amp; GFM Rendering</strong>
+                    <p>Pluggable layout-aware parsing extracts financial tables into structured matrices.</p>
+                  </div>
+                </div>
+                <div className="auth-perk-item">
+                  <div className="auth-perk-check">✓</div>
+                  <div>
+                    <strong>Row-Level Tenant Isolation &amp; History Sync</strong>
+                    <p>Your documents and queries are encrypted and strictly bound to your verified user ID.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="auth-prompt-actions">
+                <a href="/login?redirectedFrom=/" className="btn-auth-signin">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                    <polyline points="10 17 15 12 10 7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                  <span>Sign In / Create Free Account</span>
+                </a>
+                <button type="button" className="btn-auth-continue" onClick={onClose}>
+                  Continue Exploring Built-in SEC 10-Ks
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="upload-modal-overlay" onClick={uploading ? undefined : onClose} role="dialog" aria-modal="true">

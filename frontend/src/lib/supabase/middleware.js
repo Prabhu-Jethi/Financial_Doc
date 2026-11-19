@@ -49,15 +49,8 @@ export async function updateSession(request) {
     return supabaseResponse;
   }
 
-  // If unauthenticated and trying to access protected workspace or root
-  if (!user && !isLoginPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    if (pathname !== "/") {
-      url.searchParams.set("redirectedFrom", pathname);
-    }
-    return NextResponse.redirect(url);
-  }
+  // Explore Mode: Unauthenticated visitors can freely explore the workspace and SEC 10-K filings.
+  // We do NOT force redirect guests to /login.
 
   // If authenticated and visiting login page, redirect to workspace
   if (user && isLoginPage) {

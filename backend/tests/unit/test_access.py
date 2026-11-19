@@ -28,13 +28,15 @@ if str(PROJECT_ROOT) not in sys.path:
 class TestAccessAndContracts:
     def setup_method(self):
         self.client = TestClient(app)
-        ## override auth dependency for offline test execution
-        app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        ## override auth dependencies for offline test execution
+        mock_user = AuthenticatedUser(
             user_id="test_user_id",
             email="analyst@example.com",
             role="authenticated",
             claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
         )
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        app.dependency_overrides[get_optional_user] = lambda: mock_user
     
     def teardown_method(self):
         app.dependency_overrides.clear()

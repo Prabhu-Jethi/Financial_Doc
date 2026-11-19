@@ -1,11 +1,34 @@
 import { NextResponse } from "next/server";
 import { uploadDocumentToFastAPI } from "../../../../lib/server/api.js";
+import { createClient } from "../../../../lib/supabase/server.js";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Allow up to 60s for LLM/PDF extraction
 
 export async function POST(req) {
   try {
+    // Layer 1/2 Security: Require authenticated Supabase session for custom document uploads
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
+
+    if (authErr || !user) {
+      return NextResponse.json(
+        {
+          detail: "Authentication required to upload custom documents. Please sign in or create an account.",
+          auth_required: true,
+        },
+        {
+          status: 401,
+          headers: {
+            "Cache-Control": "no-store, private",
+          },
+        }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get("file");
 

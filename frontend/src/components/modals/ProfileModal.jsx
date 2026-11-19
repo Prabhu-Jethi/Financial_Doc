@@ -15,34 +15,38 @@ export default function ProfileModal({ isOpen, onClose, currentUser }) {
 
   if (!isOpen) return null;
 
+  const isGuest = !currentUser;
   const fullName =
     currentUser?.user_metadata?.full_name ||
     currentUser?.email?.split("@")[0] ||
-    "Donald Trump";
+    "Guest Explorer";
 
-  const initials = fullName
+  const initials = isGuest
+    ? "GE"
+    : fullName
     ? fullName
         .split(/\s+/)
         .map((n) => n[0])
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "DT";
+    : "GE";
 
-  const email = currentUser?.email || "donald.trump@docintel.io";
-  const role = currentUser?.user_metadata?.role || "Senior Financial Analyst";
-  const userId = currentUser?.id || "usr_8f92e01a4c";
-  const provider =
-    currentUser?.app_metadata?.provider ||
-    (currentUser?.identities?.[0]?.provider) ||
-    "Google OAuth";
+  const email = currentUser?.email || "guest@docintel.local";
+  const role = isGuest ? "Explore Mode (Read & Query)" : (currentUser?.user_metadata?.role || "Senior Financial Analyst");
+  const userId = currentUser?.id || "guest_session";
+  const provider = isGuest
+    ? "Anonymous Session"
+    : currentUser?.app_metadata?.provider ||
+      currentUser?.identities?.[0]?.provider ||
+      "Email / Password";
   const createdAt = currentUser?.created_at
     ? new Date(currentUser.created_at).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       })
-    : "October 18, 2026";
+    : "Active Session";
 
   return (
     <div className="modal-backdrop" onClick={onClose} aria-label="Close modal backdrop">
@@ -100,12 +104,12 @@ export default function ProfileModal({ isOpen, onClose, currentUser }) {
             <div className="profile-hero-info">
               <div className="profile-name-row">
                 <h3 className="profile-hero-name">{fullName}</h3>
-                <span className="profile-tier-badge">Pro Analyst</span>
+                <span className="profile-tier-badge">{isGuest ? "Guest Mode" : "Pro Analyst"}</span>
               </div>
               <span className="profile-hero-email">{email}</span>
               <div className="profile-status-indicator">
-                <span className="status-indicator-dot online" />
-                <span>Active &amp; Authenticated</span>
+                <span className={`status-indicator-dot ${isGuest ? "guest" : "online"}`} />
+                <span>{isGuest ? "Explore Mode • SEC 10-K Public Access" : "Active & Authenticated"}</span>
               </div>
             </div>
           </div>
@@ -153,9 +157,11 @@ export default function ProfileModal({ isOpen, onClose, currentUser }) {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <div>
-              <strong>Full Tenant Privileges Granted:</strong>
+              <strong>{isGuest ? "Guest Access Granted:" : "Full Tenant Privileges Granted:"}</strong>
               <p>
-                Authorized for SEC 10-K document queries, custom PDF table parsing, high-dimensional vector embeddings, and cross-company comparative analysis.
+                {isGuest
+                  ? "Authorized for SEC 10-K document queries (AAPL, MSFT, AMZN, META), interactive citation inspection, and multi-company matrices. Sign in to upload custom documents."
+                  : "Authorized for SEC 10-K document queries, custom PDF table parsing, high-dimensional vector embeddings, and cross-company comparative analysis."}
               </p>
             </div>
           </div>
@@ -163,9 +169,23 @@ export default function ProfileModal({ isOpen, onClose, currentUser }) {
 
         {/* Modal Footer */}
         <div className="modal-footer">
+          {isGuest && (
+            <a
+              href="/login"
+              className="btn-modal-primary"
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              <span>Sign In / Create Account</span>
+            </a>
+          )}
           <button
             type="button"
-            className="btn-modal-primary"
+            className={isGuest ? "btn-modal-secondary" : "btn-modal-primary"}
             onClick={onClose}
           >
             Done

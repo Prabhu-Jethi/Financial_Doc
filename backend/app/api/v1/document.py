@@ -173,16 +173,34 @@ def process_document_background(
 
 @router.get("", response_model=List[DocumentMetadataResponse])
 def list_document(user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
-    """Lists curated documents accessible to authenticated users."""
-    query = """
-    SELECT document_id, company, ticker, report_type, report_fiscal_year,
-           period_ended::text, filing_date::text, source_url, file_name, status, created_at::text, user_id
-    FROM documents
-    ORDER BY created_at DESC;
     """
+    Lists curated documents accessible to the requester.
+    - Unauthenticated guests: Returns ONLY public SEC Form 10-K benchmark filings (uploaded documents section is empty).
+    - Authenticated users: Returns public SEC Form 10-K benchmark filings PLUS only their own uploaded documents.
+    """
+    if user is None or not user.user_id:
+        query = """
+        SELECT document_id, company, ticker, report_type, report_fiscal_year,
+               period_ended::text, filing_date::text, source_url, file_name, status, created_at::text, user_id
+        FROM documents
+        WHERE (source_url != 'user_upload' AND document_id NOT LIKE 'doc_%%' AND user_id IS NULL)
+        ORDER BY created_at DESC;
+        """
+        params = ()
+    else:
+        query = """
+        SELECT document_id, company, ticker, report_type, report_fiscal_year,
+               period_ended::text, filing_date::text, source_url, file_name, status, created_at::text, user_id
+        FROM documents
+        WHERE (source_url != 'user_upload' AND document_id NOT LIKE 'doc_%%' AND user_id IS NULL)
+           OR user_id = %s
+        ORDER BY created_at DESC;
+        """
+        params = (user.user_id,)
+
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, params)
             rows = cur.fetchall()
         
     return [
@@ -267,7 +285,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...), 
     doc_type: str = Form("general"), 
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Accepts PDF uploads and dispatches asynchronous background ingestion.
@@ -343,7 +361,7 @@ async def upload_document(
                     f"uploads/{doc_id}.pdf",
                     file_hash,
                     "parsing",
-                    user.user_id if user else None
+                    user.user_id
                 )   
             )
             conn.commit()
@@ -370,7 +388,7 @@ async def upload_document(
         file_name=file.filename,
         doc_type=doc_type,
         file_hash=file_hash,
-        user_id=user.user_id if user else "authenticated_user"
+        user_id=user.user_id
     )
 
     return {
