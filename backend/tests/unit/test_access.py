@@ -15,12 +15,8 @@ from app.schemas import (
     AnswerStatus,
 )
 from app.main import app
-<<<<<<< Updated upstream
-from app.core.security import AuthenticatedUser, get_current_user
-=======
 from app.core.security import AuthenticatedUser, get_current_user, get_optional_user
 from unittest.mock import patch, MagicMock
->>>>>>> Stashed changes
 
 
 # Ensure project root is in sys.path
@@ -133,8 +129,6 @@ class TestAccessAndContracts:
         # Assert answering service and its embedding models were never instantiated
         assert query_module._answering_service is None
 
-<<<<<<< Updated upstream
-=======
     def test_upload_endpoint_requires_authentication(self):
         """POST /api/v1/documents/upload must reject unauthenticated requests with HTTP 401."""
         app.dependency_overrides.clear()
@@ -220,7 +214,6 @@ class TestAccessAndContracts:
             assert "user_id = %s" in executed_query
             assert executed_params == ("test_user_id",)
 
->>>>>>> Stashed changes
 
 
 def main():
