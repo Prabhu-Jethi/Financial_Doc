@@ -169,7 +169,7 @@ export default function SettingsModal({
                 <div className="theme-selection-grid">
                   <div
                     className={`theme-card ${theme === "light" ? "active" : ""}`}
-                    onClick={() => theme !== "light" && onToggleTheme && onToggleTheme()}
+                    onClick={() => onToggleTheme && onToggleTheme("light")}
                   >
                     <div className="theme-card-preview light-preview">
                       <div className="preview-top-bar" />
@@ -194,7 +194,7 @@ export default function SettingsModal({
 
                   <div
                     className={`theme-card ${theme === "dark" ? "active" : ""}`}
-                    onClick={() => theme !== "dark" && onToggleTheme && onToggleTheme()}
+                    onClick={() => onToggleTheme && onToggleTheme("dark")}
                   >
                     <div className="theme-card-preview dark-preview">
                       <div className="preview-top-bar" />
