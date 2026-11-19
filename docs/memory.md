@@ -141,6 +141,7 @@ flowchart TD
 | **DEC-064** | Dynamic Upload Scope Label & Input Placeholder | Replaced generic `General FY2026 general` label with uploaded filename and switched placeholder dynamically. | Implemented |
 | **DEC-065** | Ticker Filter Row Wrap & Compact Padding | Applied `flex-wrap: wrap; gap: 4px;` in `.company-filter-bar` preventing `META` pill clipping in 260px sidebar. | Implemented |
 | **DEC-066** | PDF Viewer Outline Suppression & Iframe Spinner | Appended `&pagemode=none&navpanes=0` to suppress browser PDF drawer and added centered loading overlay. | Implemented |
+| **DEC-067** | Guest Explorer Mode & Authless Ingestion Barrier | Allowed unauthenticated visitors to freely explore and query SEC 10-K filings, compare matrices, and inspect citations; enforced mandatory authentication (HTTP 401) on `POST /upload` with in-modal sign-in barrier card. | Implemented |
 
 ---
 
@@ -187,3 +188,4 @@ flowchart TD
 | 5 Nov 2026 | Scale-Aware Grounding & 100% DEV Benchmark Pass | Upgraded `EvidenceService` with billion-scale conversion and LaTeX normalization; achieved 20/20 (100%) pass on DEV benchmark. |
 | 15 Nov 2026 | OpenAI API Embeddings Migration | Migrated to `text-embedding-3-small` (1536-dim), eliminating PyTorch; reduced container footprint to ~60MB RAM. |
 | 17 Nov 2026 | Engineering Audit & Bug Fixes (v1.9) | Implemented fixes for all 8 audit defects (BUG-001 through BUG-008): balanced comparative retrieval, optimistic loading skeleton, markdown bold rendering, 2-column PDF spacing, physical page citations, dynamic upload scope, ticker wrapping, and PDF outline suppression. Verified with 54 unit tests passing. |
+| 19 Nov 2026 | Guest Explorer Mode & Ingestion Barrier (DEC-067) | Implemented authless workspace exploration for SEC 10-K filings (AAPL, MSFT, AMZN, META); gated custom PDF uploads with mandatory authentication and in-modal sign-in barrier; verified with 55 unit tests passing. |
