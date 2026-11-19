@@ -103,6 +103,9 @@ export default function Home() {
     fetchHealth();
     fetchUserHistory();
 
+    let authSubscription = null;
+    let handleWindowResize = null;
+
     // 1. Initialize and monitor Supabase user session
     try {
       const supabase = createClient();
@@ -118,25 +121,27 @@ export default function Home() {
         fetchDocuments(nextUser);
       });
 
-      // Cleanup subscription
-      return () => {
-        authListener?.subscription?.unsubscribe();
-      };
+      authSubscription = authListener?.subscription;
     } catch (e) {
       // quiet fallback in local testing
       fetchDocuments(null);
     }
 
-    // 2. Theme initialization
+    // 2. Theme initialization & synchronization across page reloads
     try {
       const savedTheme = localStorage.getItem("docintel_theme");
-      if (savedTheme === "dark" || savedTheme === "light") {
-        setTheme(savedTheme);
-        document.documentElement.setAttribute("data-theme", savedTheme);
-      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        setTheme("dark");
-        document.documentElement.setAttribute("data-theme", "dark");
-      }
+      const currentAttr = document.documentElement.getAttribute("data-theme");
+      const effectiveTheme =
+        savedTheme === "dark" || savedTheme === "light"
+          ? savedTheme
+          : currentAttr === "dark" || currentAttr === "light"
+          ? currentAttr
+          : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+
+      setTheme(effectiveTheme);
+      document.documentElement.setAttribute("data-theme", effectiveTheme);
     } catch (e) {
       // quiet fallback
     }
@@ -146,7 +151,7 @@ export default function Home() {
       if (window.innerWidth <= 1024) {
         setSidebarOpen(false);
       }
-      const handleWindowResize = () => {
+      handleWindowResize = () => {
         if (window.innerWidth <= 1024) {
           setSidebarOpen(false);
         }
@@ -180,6 +185,14 @@ export default function Home() {
     } catch (e) {
       console.warn("[Storage] Error restoring persisted state", e);
     }
+
+    // 5. Cleanup auth subscription & event listeners on unmount
+    return () => {
+      authSubscription?.unsubscribe();
+      if (handleWindowResize && typeof window !== "undefined") {
+        window.removeEventListener("resize", handleWindowResize);
+      }
+    };
   }, []);
 
   const handleSignOut = async () => {
@@ -193,8 +206,13 @@ export default function Home() {
     window.location.href = "/";
   };
 
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
+  const toggleTheme = (forcedTheme) => {
+    const nextTheme =
+      forcedTheme === "dark" || forcedTheme === "light"
+        ? forcedTheme
+        : theme === "dark"
+        ? "light"
+        : "dark";
     setTheme(nextTheme);
     document.documentElement.setAttribute("data-theme", nextTheme);
     try {
