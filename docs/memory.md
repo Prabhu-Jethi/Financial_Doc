@@ -142,6 +142,7 @@ flowchart TD
 | **DEC-065** | Ticker Filter Row Wrap & Compact Padding | Applied `flex-wrap: wrap; gap: 4px;` in `.company-filter-bar` preventing `META` pill clipping in 260px sidebar. | Implemented |
 | **DEC-066** | PDF Viewer Outline Suppression & Iframe Spinner | Appended `&pagemode=none&navpanes=0` to suppress browser PDF drawer and added centered loading overlay. | Implemented |
 | **DEC-067** | Guest Explorer Mode & Authless Ingestion Barrier | Allowed unauthenticated visitors to freely explore and query SEC 10-K filings, compare matrices, and inspect citations; enforced mandatory authentication (HTTP 401) on `POST /upload` with in-modal sign-in barrier card. | Implemented |
+| **DEC-068** | User-Scoped Uploaded Documents & Empty Guest State | Isolated `list_document` query and client state by `user_id` so new and guest users receive an empty uploaded documents section; any user-uploaded document (general, SEC 10-K, or calculation) routes exclusively to that user's uploaded list. | Implemented |
 
 ---
 
