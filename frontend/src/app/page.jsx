@@ -127,7 +127,7 @@ export default function Home() {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         setCurrentUser(session?.user || null);
         if (event === "SIGNED_OUT") {
-          window.location.href = "/login";
+          setCurrentUser(null);
         }
       });
 
@@ -216,7 +216,8 @@ export default function Home() {
     } catch (e) {
       // quiet fallback
     }
-    window.location.href = "/login";
+    setCurrentUser(null);
+    window.location.href = "/";
   };
 
   const toggleTheme = () => {
@@ -808,6 +809,22 @@ Quote: "${c.exact_quote}"`
           </div>
 
           <div className="top-bar-right">
+            {/* Guest Explorer Sign In Button */}
+            {!currentUser && (
+              <a
+                href="/login"
+                className="btn-top-action btn-signin-pill"
+                title="Sign in or create an account to upload custom documents"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                <span>Sign In</span>
+              </a>
+            )}
+
             {/* Multi-Company Comparison Matrix Button */}
             <button
               type="button"
@@ -914,6 +931,7 @@ Quote: "${c.exact_quote}"`
           isOpen={true}
           onClose={closeModal}
           onDocumentUploaded={handleDocumentUploaded}
+          currentUser={currentUser}
         />
       )}
 
