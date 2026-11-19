@@ -174,13 +174,28 @@ export async function fetchDocumentMetadata() {
     // fallback to direct database or documents list
   }
 
-  // Resilient direct database query so uploaded documents ALWAYS load forever
+  // Resilient direct database query with strict user isolation:
+  // - Guests receive ONLY public SEC benchmark filings (zero user uploads).
+  // - Authenticated users receive public SEC filings PLUS only their own uploads.
   try {
     const supabase = createClient();
-    const { data: dbDocs, error } = await supabase
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    let query = supabase
       .from("documents")
       .select("document_id, company, ticker, report_type, report_fiscal_year, period_ended, filing_date, source_url, file_name, status, created_at, user_id")
       .order("created_at", { ascending: false });
+
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},and(source_url.neq.user_upload,document_id.not.like.doc_%)`);
+    } else {
+      query = query.neq("source_url", "user_upload").not("document_id", "like", "doc_%");
+    }
+
+    const { data: dbDocs, error } = await query;
 
     if (!error && Array.isArray(dbDocs) && dbDocs.length > 0) {
       return dbDocs;
