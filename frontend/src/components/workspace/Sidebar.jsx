@@ -56,22 +56,28 @@ export default function Sidebar({
     }
   };
 
-  // Separate SEC 10-K Filings from User-Uploaded General Documents
+  // Separate Built-in Corporate Filings (SEC 10-K) from User-Uploaded Documents
+  // Built-in benchmark corporate filings: only curated SEC 10-K filings (Apple, Amazon, Microsoft, Meta)
   const secDocs = documents.filter(
     (d) =>
-      (d.report_type === "10-K" || (d.ticker && ["AAPL", "AMZN", "MSFT", "META"].includes(d.ticker))) &&
       !d.isCustom &&
-      d.report_type !== "general" &&
-      !d.document_id?.startsWith("doc_")
+      d.source_url !== "user_upload" &&
+      !d.document_id?.startsWith("doc_") &&
+      !d.user_id &&
+      (d.report_type === "10-K" || (d.ticker && ["AAPL", "AMZN", "MSFT", "META"].includes(d.ticker)))
   );
 
-  const uploadedDocs = documents.filter(
-    (d) =>
-      d.report_type === "general" ||
-      d.ticker === "DOC" ||
-      d.isCustom ||
-      d.document_id?.startsWith("doc_")
-  );
+  // Uploaded Documents: Strictly empty for new or guest users.
+  // For authenticated users, strictly their own uploaded documents regardless of doc type (general, SEC 10-K, etc.).
+  const uploadedDocs = !currentUser
+    ? []
+    : documents.filter(
+        (d) =>
+          d.isCustom ||
+          d.source_url === "user_upload" ||
+          d.document_id?.startsWith("doc_") ||
+          (d.user_id && d.user_id === currentUser.id)
+      );
 
   const filteredSecDocs = secDocs.filter((doc) => {
     if (activeCompanyFilter === "All") return true;
@@ -439,7 +445,11 @@ export default function Sidebar({
               {/* Uploaded Documents List */}
               {uploadedDocs.length === 0 ? (
                 <div className="history-empty-state" style={{ padding: "0.5rem 0.25rem", textAlign: "center" }}>
-                  <span>No uploaded documents yet. Upload a PDF contract, invoice, or note to parse.</span>
+                  <span>
+                    {!currentUser
+                      ? "No uploaded documents. Sign in to upload custom PDFs or filings."
+                      : "No uploaded documents yet. Upload your own documents to analyze."}
+                  </span>
                 </div>
               ) : (
                 <div className="compact-doc-list">
