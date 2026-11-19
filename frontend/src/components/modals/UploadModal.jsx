@@ -184,6 +184,7 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded, curre
               page_count: st.total_pages || 1,
               chunks_ingested: st.chunks_ingested || 0,
               isCustom: true,
+              user_id: currentUser?.id || null,
             };
 
             setTimeout(() => {
