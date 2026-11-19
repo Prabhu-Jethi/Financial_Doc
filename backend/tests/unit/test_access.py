@@ -15,7 +15,10 @@ from app.schemas import (
     AnswerStatus,
 )
 from app.main import app
+from app.core.security import AuthenticatedUser, get_current_user
 from app.core.security import AuthenticatedUser, get_current_user, get_optional_user
+from unittest.mock import patch, MagicMock
+
 
 
 # Ensure project root is in sys.path
@@ -152,7 +155,7 @@ class TestAccessAndContracts:
 
     def test_list_documents_guest_mode_omits_user_uploads(self):
         """GET /api/v1/documents without auth token must return only public SEC benchmark filings, never user uploads."""
-        from unittest.mock import patch, MagicMock
+        
 
         mock_rows = [
             ("AAPL-10K-2024", "Apple Inc.", "AAPL", "10-K", 2024, "2024-09-28", "2024-10-31", "local://data/originals/AAPL.pdf", "AAPL.pdf", "ready", "2026-10-01", None),
@@ -214,7 +217,6 @@ class TestAccessAndContracts:
             executed_query, executed_params = mock_cur.execute.call_args[0]
             assert "user_id = %s" in executed_query
             assert executed_params == ("test_user_id",)
-
 
 
 def main():
