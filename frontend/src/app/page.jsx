@@ -54,19 +54,8 @@ export default function Home() {
   const [pdfTargetCitation, setPdfTargetCitation] = useState(null);
   const [pdfTargetDoc, setPdfTargetDoc] = useState(null);
 
-  // Documents
-  const [documents, setDocuments] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("docintel_custom_documents");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-    }
-    return [];
-  });
+  // Documents: clean initialization; SEC benchmark documents and user uploads are hydrated dynamically
+  const [documents, setDocuments] = useState([]);
   const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [health, setHealth] = useState({ active_engine: "sec_10k_index" });
 
@@ -112,23 +101,21 @@ export default function Home() {
 
   useEffect(() => {
     fetchHealth();
-    fetchDocuments();
     fetchUserHistory();
 
     // 1. Initialize and monitor Supabase user session
     try {
       const supabase = createClient();
       supabase.auth.getUser().then(({ data }) => {
-        if (data?.user) {
-          setCurrentUser(data.user);
-        }
+        const u = data?.user || null;
+        setCurrentUser(u);
+        fetchDocuments(u);
       });
 
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-        setCurrentUser(session?.user || null);
-        if (event === "SIGNED_OUT") {
-          setCurrentUser(null);
-        }
+        const nextUser = session?.user || null;
+        setCurrentUser(nextUser);
+        fetchDocuments(nextUser);
       });
 
       // Cleanup subscription
@@ -137,6 +124,7 @@ export default function Home() {
       };
     } catch (e) {
       // quiet fallback in local testing
+      fetchDocuments(null);
     }
 
     // 2. Theme initialization
@@ -152,21 +140,6 @@ export default function Home() {
     } catch (e) {
       // quiet fallback
     }
-
-    // Hydrate locally saved uploaded documents immediately
-    try {
-      const savedDocs = localStorage.getItem("docintel_custom_documents");
-      if (savedDocs) {
-        const parsedDocs = JSON.parse(savedDocs);
-        if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
-          setDocuments((prev) => {
-            const existingIds = new Set(prev.map((d) => d.document_id));
-            const unique = parsedDocs.filter((d) => !existingIds.has(d.document_id));
-            return [...unique, ...prev];
-          });
-        }
-      }
-    } catch (e) {}
 
     // 3. Responsive initial state & dynamic resize handler (<=1024px for iPad/tablets/phones)
     if (typeof window !== "undefined") {
@@ -305,7 +278,7 @@ export default function Home() {
     }
   };
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (activeUser = currentUser) => {
     try {
       let serverDocs = [];
       try {
@@ -318,45 +291,44 @@ export default function Home() {
         }
       } catch (e) {}
 
-      // Resilient client-side query to guarantee custom uploaded documents always appear
-      try {
-        const supabase = createClient();
-        const { data: dbDocs, error } = await supabase
-          .from("documents")
-          .select("document_id, company, ticker, report_type, report_fiscal_year, period_ended, filing_date, source_url, file_name, status, created_at, user_id")
-          .order("created_at", { ascending: false });
+      // If user is authenticated, query Supabase for their private uploaded docs
+      if (activeUser?.id) {
+        try {
+          const supabase = createClient();
+          const { data: dbDocs, error } = await supabase
+            .from("documents")
+            .select("document_id, company, ticker, report_type, report_fiscal_year, period_ended, filing_date, source_url, file_name, status, created_at, user_id")
+            .eq("user_id", activeUser.id)
+            .order("created_at", { ascending: false });
 
-        if (!error && Array.isArray(dbDocs) && dbDocs.length > 0) {
-          const existingIds = new Set(serverDocs.map((d) => d.document_id));
-          const newFromDb = dbDocs.filter((d) => !existingIds.has(d.document_id));
-          serverDocs = [...serverDocs, ...newFromDb];
+          if (!error && Array.isArray(dbDocs) && dbDocs.length > 0) {
+            const existingIds = new Set(serverDocs.map((d) => d.document_id));
+            const newFromDb = dbDocs.filter((d) => !existingIds.has(d.document_id));
+            serverDocs = [...serverDocs, ...newFromDb];
+          }
+        } catch (dbErr) {}
+
+        // User-scoped localStorage custom documents
+        let localCustom = [];
+        try {
+          localCustom = JSON.parse(localStorage.getItem(`docintel_custom_documents_${activeUser.id}`) || "[]");
+        } catch (e) {}
+
+        const allServerIds = new Set(serverDocs.map((d) => d.document_id));
+        const fullList = [
+          ...localCustom.filter((cd) => !allServerIds.has(cd.document_id)),
+          ...serverDocs,
+        ];
+
+        if (fullList.length > 0) {
+          setDocuments(fullList);
         }
-      } catch (dbErr) {}
-
-      // Merge with locally saved custom documents so nothing vanishes during network delay
-      let localCustom = [];
-      try {
-        localCustom = JSON.parse(localStorage.getItem("docintel_custom_documents") || "[]");
-      } catch (e) {}
-
-      const allServerIds = new Set(serverDocs.map((d) => d.document_id));
-      const fullList = [
-        ...localCustom.filter((cd) => !allServerIds.has(cd.document_id)),
-        ...serverDocs,
-      ];
-
-      if (fullList.length > 0) {
-        setDocuments(fullList);
-
-        // Keep localStorage updated with custom docs
-        const customDocs = fullList.filter(
-          (d) => d.report_type === "general" || d.ticker === "DOC" || d.isCustom || d.document_id?.startsWith("doc_")
+      } else {
+        // Guest mode: strictly public SEC benchmark documents; uploaded documents section is empty
+        const publicSecOnly = serverDocs.filter(
+          (d) => !d.isCustom && d.source_url !== "user_upload" && !d.document_id?.startsWith("doc_") && !d.user_id
         );
-        if (customDocs.length > 0) {
-          try {
-            localStorage.setItem("docintel_custom_documents", JSON.stringify(customDocs));
-          } catch (e) {}
-        }
+        setDocuments(publicSecOnly);
       }
     } catch (e) {
       // quiet fallback
@@ -364,17 +336,25 @@ export default function Home() {
   };
 
   const handleDocumentUploaded = (newDoc) => {
-    // Persist custom document in localStorage immediately so it never vanishes
-    try {
-      const existing = JSON.parse(localStorage.getItem("docintel_custom_documents") || "[]");
-      const filtered = existing.filter((d) => d.document_id !== newDoc.document_id);
-      const updated = [newDoc, ...filtered];
-      localStorage.setItem("docintel_custom_documents", JSON.stringify(updated));
-    } catch (e) {}
+    const docWithMeta = {
+      ...newDoc,
+      isCustom: true,
+      user_id: currentUser?.id || null,
+    };
 
-    setDocuments((prev) => [newDoc, ...prev.filter((d) => d.document_id !== newDoc.document_id)]);
-    setSelectedDocIds([newDoc.document_id]);
-    fetchDocuments();
+    if (currentUser?.id) {
+      try {
+        const storageKey = `docintel_custom_documents_${currentUser.id}`;
+        const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        const filtered = existing.filter((d) => d.document_id !== docWithMeta.document_id);
+        const updated = [docWithMeta, ...filtered];
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+      } catch (e) {}
+    }
+
+    setDocuments((prev) => [docWithMeta, ...prev.filter((d) => d.document_id !== docWithMeta.document_id)]);
+    setSelectedDocIds([docWithMeta.document_id]);
+    fetchDocuments(currentUser);
   };
 
   const handleToggleDocSelection = (docId) => {
