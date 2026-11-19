@@ -146,6 +146,24 @@ class TestAccessAndContracts:
                 claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
             )
 
+    def test_list_documents_guest_mode_omits_user_uploads(self):
+        """GET /api/v1/documents without auth token must return only public SEC benchmark filings, never user uploads."""
+        app.dependency_overrides.clear()
+        try:
+            response = self.client.get("/api/v1/documents")
+            if response.status_code == 200:
+                docs = response.json()
+                for doc in docs:
+                    assert not doc["document_id"].startswith("doc_")
+                    assert doc.get("source_url") != "user_upload"
+        finally:
+            app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+                user_id="test_user_id",
+                email="analyst@example.com",
+                role="authenticated",
+                claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
+            )
+
 
 
 def main():
