@@ -129,21 +129,24 @@ export default function Sidebar({
     }
   };
 
+  const isGuest = !currentUser;
   const userFullName =
     currentUser?.user_metadata?.full_name ||
     currentUser?.email?.split("@")[0] ||
-    "Donald Trump";
+    "Guest Explorer";
 
-  const userInitials = userFullName
+  const userInitials = isGuest
+    ? "GE"
+    : userFullName
     ? userFullName
         .split(/\s+/)
         .map((n) => n[0])
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "DT";
+    : "GE";
 
-  const userRole = currentUser?.user_metadata?.role || "Pro Analyst";
+  const userRole = isGuest ? "Explore Mode" : (currentUser?.user_metadata?.role || "Pro Analyst");
 
   return (
     <aside className={`webapp-sidebar ${isOpen ? "open" : ""}`} aria-label="Application Sidebar">
@@ -726,8 +729,22 @@ export default function Sidebar({
               </svg>
             </button>
 
-            {/* Log Out */}
-            {onSignOut && (
+            {/* Log Out / Sign In */}
+            {isGuest ? (
+              <a
+                href="/login"
+                className="chatgpt-popover-item"
+                style={{ color: "var(--brand-primary, #2563eb)", fontWeight: 500 }}
+                role="menuitem"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                <span>Sign in / Sign up</span>
+              </a>
+            ) : onSignOut ? (
               <button
                 type="button"
                 className="chatgpt-popover-item logout-item"
@@ -744,7 +761,7 @@ export default function Sidebar({
                 </svg>
                 <span>Log out</span>
               </button>
-            )}
+            ) : null}
           </div>
         )}
 
