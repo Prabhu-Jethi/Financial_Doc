@@ -15,7 +15,7 @@ from app.schemas import (
     AnswerStatus,
 )
 from app.main import app
-from app.core.security import AuthenticatedUser, get_current_user
+from app.core.security import AuthenticatedUser, get_current_user, get_optional_user
 
 
 # Ensure project root is in sys.path
@@ -27,13 +27,15 @@ if str(PROJECT_ROOT) not in sys.path:
 class TestAccessAndContracts:
     def setup_method(self):
         self.client = TestClient(app)
-        ## override auth dependency for offline test execution
-        app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        ## override auth dependencies for offline test execution
+        mock_user = AuthenticatedUser(
             user_id="test_user_id",
             email="analyst@example.com",
             role="authenticated",
             claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
         )
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        app.dependency_overrides[get_optional_user] = lambda: mock_user
     
     def teardown_method(self):
         app.dependency_overrides.clear()
@@ -139,30 +141,79 @@ class TestAccessAndContracts:
             )
             assert response.status_code == 401
         finally:
-            app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+            mock_user = AuthenticatedUser(
                 user_id="test_user_id",
                 email="analyst@example.com",
                 role="authenticated",
                 claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
             )
+            app.dependency_overrides[get_current_user] = lambda: mock_user
+            app.dependency_overrides[get_optional_user] = lambda: mock_user
 
     def test_list_documents_guest_mode_omits_user_uploads(self):
         """GET /api/v1/documents without auth token must return only public SEC benchmark filings, never user uploads."""
-        app.dependency_overrides.clear()
+        from unittest.mock import patch, MagicMock
+
+        mock_rows = [
+            ("AAPL-10K-2024", "Apple Inc.", "AAPL", "10-K", 2024, "2024-09-28", "2024-10-31", "local://data/originals/AAPL.pdf", "AAPL.pdf", "ready", "2026-10-01", None),
+            ("MSFT-10K-2024", "Microsoft Corporation", "MSFT", "10-K", 2024, "2024-06-30", "2024-08-01", "local://data/originals/MSFT.pdf", "MSFT.pdf", "ready", "2026-10-01", None),
+        ]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = mock_rows
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        app.dependency_overrides[get_optional_user] = lambda: None
         try:
-            response = self.client.get("/api/v1/documents")
-            if response.status_code == 200:
+            with patch("app.api.v1.document.psycopg.connect", return_value=mock_conn):
+                response = self.client.get("/api/v1/documents")
+                assert response.status_code == 200
                 docs = response.json()
+                assert len(docs) == 2
                 for doc in docs:
                     assert not doc["document_id"].startswith("doc_")
                     assert doc.get("source_url") != "user_upload"
+
+                executed_query, executed_params = mock_cur.execute.call_args[0]
+                assert "source_url != 'user_upload'" in executed_query
+                assert "user_id IS NULL" in executed_query
+                assert executed_params == ()
         finally:
-            app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+            mock_user = AuthenticatedUser(
                 user_id="test_user_id",
                 email="analyst@example.com",
                 role="authenticated",
                 claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
             )
+            app.dependency_overrides[get_current_user] = lambda: mock_user
+            app.dependency_overrides[get_optional_user] = lambda: mock_user
+
+    def test_list_documents_authenticated_user_includes_own_uploads(self):
+        """GET /api/v1/documents with auth token must query for public SEC filings plus user's own uploads."""
+        from unittest.mock import patch, MagicMock
+
+        mock_rows = [
+            ("AAPL-10K-2024", "Apple Inc.", "AAPL", "10-K", 2024, "2024-09-28", "2024-10-31", "local://data/originals/AAPL.pdf", "AAPL.pdf", "ready", "2026-10-01", None),
+            ("doc_custom01", "General", "DOC", "general", 2026, "2026-11-19", "2026-11-19", "user_upload", "contract.pdf", "ready", "2026-11-19", "test_user_id"),
+        ]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = mock_rows
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("app.api.v1.document.psycopg.connect", return_value=mock_conn):
+            response = self.client.get("/api/v1/documents")
+            assert response.status_code == 200
+            docs = response.json()
+            assert len(docs) == 2
+
+            executed_query, executed_params = mock_cur.execute.call_args[0]
+            assert "user_id = %s" in executed_query
+            assert executed_params == ("test_user_id",)
 
 
 
