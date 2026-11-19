@@ -267,7 +267,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...), 
     doc_type: str = Form("general"), 
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Accepts PDF uploads and dispatches asynchronous background ingestion.
@@ -343,7 +343,7 @@ async def upload_document(
                     f"uploads/{doc_id}.pdf",
                     file_hash,
                     "parsing",
-                    user.user_id if user else None
+                    user.user_id
                 )   
             )
             conn.commit()
@@ -370,7 +370,7 @@ async def upload_document(
         file_name=file.filename,
         doc_type=doc_type,
         file_hash=file_hash,
-        user_id=user.user_id if user else "authenticated_user"
+        user_id=user.user_id
     )
 
     return {
