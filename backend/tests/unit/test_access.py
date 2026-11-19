@@ -128,6 +128,24 @@ class TestAccessAndContracts:
         # Assert answering service and its embedding models were never instantiated
         assert query_module._answering_service is None
 
+    def test_upload_endpoint_requires_authentication(self):
+        """POST /api/v1/documents/upload must reject unauthenticated requests with HTTP 401."""
+        app.dependency_overrides.clear()
+        try:
+            response = self.client.post(
+                "/api/v1/documents/upload",
+                files={"file": ("test.pdf", b"%PDF-1.4 mock content", "application/pdf")},
+                data={"doc_type": "general"}
+            )
+            assert response.status_code == 401
+        finally:
+            app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+                user_id="test_user_id",
+                email="analyst@example.com",
+                role="authenticated",
+                claims={"sub": "test_user_id", "email": "analyst@example.com", "role": "authenticated"}
+            )
+
 
 
 def main():
