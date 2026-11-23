@@ -228,6 +228,68 @@ class TestCitationsAndGrounding:
         assert audit["is_grounded"] is True
         assert len(audit["unverified_numbers"]) == 0
 
+    def test_source_page_not_misidentified_as_10_from_10k(self):
+        """Regression test: '10-K' or '10K' in document_id/page_id must not be misidentified as source_page=10."""
+        doc = Document(
+            page_content="iPhone net sales were $201,183 million in fiscal year 2024.",
+            metadata={
+                "document_id": "AAPL-10K-2024",
+                "page_id": "AAPL-10K-2024 - P026",
+                "chunk_id": "AAPL-10K-2024 - P026 - CHK01",
+                "printed_page": "26",
+                "company": "Apple Inc."
+            }
+        )
+        citations = self.evidence_service.verify_provenance_citations(
+            docs=[doc],
+            answer_text="Apple iPhone sales were $201,183 million.",
+            calculations=[]
+        )
+        assert len(citations) == 1
+        # source_page must be 26 (from P026), NOT 10 (from -10K)
+        assert citations[0].source_page == 26
+        assert citations[0].printed_page == "26"
+
+    def test_source_page_extracts_from_msft_92(self):
+        """MSFT-10K-2024 - P092 - CHK01 must extract source_page=92."""
+        doc = Document(
+            page_content="Intelligent Cloud segment revenue was $105,362 million in fiscal year 2024.",
+            metadata={
+                "document_id": "MSFT-10K-2024",
+                "page_id": "MSFT-10K-2024 - P092",
+                "chunk_id": "MSFT-10K-2024 - P092 - CHK01",
+                "printed_page": "92",
+                "company": "Microsoft Corporation"
+            }
+        )
+        citations = self.evidence_service.verify_provenance_citations(
+            docs=[doc],
+            answer_text="Microsoft cloud revenue was $105,362 million.",
+            calculations=[]
+        )
+        assert len(citations) == 1
+        assert citations[0].source_page == 92
+
+    def test_source_page_respects_explicit_physical_page(self):
+        """If physical_page is explicitly set in metadata, it must be used as source_page."""
+        doc = Document(
+            page_content="AWS revenue reached $105,255 million in fiscal year 2024.",
+            metadata={
+                "document_id": "AMZN-10K-2024",
+                "printed_page": "68",
+                "physical_page": 71,
+                "company": "Amazon.com, Inc."
+            }
+        )
+        citations = self.evidence_service.verify_provenance_citations(
+            docs=[doc],
+            answer_text="AWS revenue was $105,255 million.",
+            calculations=[]
+        )
+        assert len(citations) == 1
+        assert citations[0].source_page == 71
+        assert citations[0].printed_page == "68"
+
 
 
 def main():
