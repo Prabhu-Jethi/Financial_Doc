@@ -90,6 +90,11 @@ class FinancialRetriever(BaseRetriever):
                     score = float(row[7]) if row[7] is not None else 0.0
                     meta = row[6] if isinstance(row[6], dict) else {}
                     sec_default = "Item 8 - Financial Statements" if "10-k" in str(row[1]).lower() else "Document Passage"
+                    phys_page = None
+                    if row[2]:
+                        pm = re.search(r"(?:[-_\s]+P|[-_]p)(\d+)(?![a-zA-Z])", str(row[2]), re.IGNORECASE)
+                        if pm:
+                            phys_page = int(pm.group(1))
                     meta.update({
                         "chunk_id": row[0],
                         "document_id": row[1],
@@ -99,6 +104,7 @@ class FinancialRetriever(BaseRetriever):
                         "similarity_score": round(score, 4),
                         "dense_rank": rank,
                         "printed_page": meta.get("printed_page", "N/A"),
+                        "physical_page": phys_page,
                         "section": meta.get("section") or sec_default,
                     })
                     docs.append(Document(page_content=row[5], metadata=meta))
@@ -133,6 +139,11 @@ class FinancialRetriever(BaseRetriever):
                         lexical_score = float(row[7]) if row[7] is not None else 0.0
                         meta = row[6] if isinstance(row[6], dict) else {}
                         sec_default = "Item 8 - Financial Statements" if "10-k" in str(row[1]).lower() else "Document Passage"
+                        phys_page = None
+                        if row[2]:
+                            pm = re.search(r"(?:[-_\s]+P|[-_]p)(\d+)(?![a-zA-Z])", str(row[2]), re.IGNORECASE)
+                            if pm:
+                                phys_page = int(pm.group(1))
                         meta.update({
                             "chunk_id": row[0],
                             "document_id": row[1],
@@ -142,6 +153,7 @@ class FinancialRetriever(BaseRetriever):
                             "lexical_score": round(lexical_score, 4),
                             "lexical_rank": rank,
                             "printed_page": meta.get("printed_page", "N/A"),
+                            "physical_page": phys_page,
                             "section": meta.get("section") or sec_default,
                         })
                     docs.append(Document(page_content=row[5], metadata=meta))
