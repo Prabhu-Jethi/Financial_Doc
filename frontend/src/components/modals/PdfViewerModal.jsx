@@ -2,6 +2,40 @@
 
 import { useState, useEffect, useMemo } from "react";
 
+// Resolves the 1-based physical PDF page index for accurate browser iframe scrolling (#page=N).
+// Eliminates Form 10-K cover/TOC page offsets and guards against corrupted -10K regex tags.
+function resolvePhysicalPage(citation, activeDoc) {
+  // 1. Direct explicit physical/source page from citation metadata
+  const sp = citation?.source_page || citation?.physical_page;
+  if (sp && !isNaN(parseInt(sp, 10))) {
+    const parsed = parseInt(sp, 10);
+    // Sanity guard against legacy backend bug where "-10K" caused source_page=10
+    const rawId = `${citation?.citation_id || ""} ${citation?.chunk_id || ""} ${citation?.page_id || ""}`;
+    if (parsed !== 10 || /(?:[-_\s]+P|[-_]p)0?10(?![a-zA-Z0-9])/i.test(rawId)) {
+      return parsed;
+    }
+  }
+
+  // 2. Extract physical page directly from chunk_id, citation_id, or page_id (e.g. "AAPL-10K-2024 - P026 - CHK01" -> 26)
+  const idStr = `${citation?.citation_id || ""} ${citation?.chunk_id || ""} ${citation?.page_id || ""}`;
+  const pMatch = idStr.match(/(?:[-_\s]+P|[-_]p)(\d+)(?![a-zA-Z])/i);
+  if (pMatch) {
+    return parseInt(pMatch[1], 10);
+  }
+
+  // 3. Fallback to printed_page numeric string
+  if (citation?.printed_page) {
+    const match = String(citation.printed_page).match(/\d+/);
+    if (match) return parseInt(match[0], 10);
+  }
+
+  // 4. Fallback to active document start_page or page 1
+  if (activeDoc?.start_page && !isNaN(parseInt(activeDoc.start_page, 10))) {
+    return parseInt(activeDoc.start_page, 10);
+  }
+  return 1;
+}
+
 export default function PdfViewerModal({
   isOpen,
   onClose,
@@ -51,21 +85,10 @@ export default function PdfViewerModal({
   // Extract initial target page when citation changes
   // Uses physical source_page index first to eliminate Form 10-K cover/TOC page offsets
   useEffect(() => {
-    const physicalPage = citation?.source_page || citation?.physical_page;
-    if (physicalPage && !isNaN(parseInt(physicalPage, 10))) {
-      setCurrentPage(parseInt(physicalPage, 10));
-    } else if (citation?.printed_page) {
-      const match = String(citation.printed_page).match(/\d+/);
-      if (match) {
-        setCurrentPage(parseInt(match[0], 10));
-      } else {
-        setCurrentPage(1);
-      }
-    } else {
-      setCurrentPage(1);
-    }
+    const targetPage = resolvePhysicalPage(citation, activeDoc);
+    setCurrentPage(targetPage);
     setIframeLoading(true);
-  }, [citation]);
+  }, [citation, activeDoc]);
 
   useEffect(() => {
     setIframeLoading(true);
@@ -320,7 +343,12 @@ export default function PdfViewerModal({
                 <div className="highlighter-title-tag">
                   <span className="highlighter-glow-icon">⚡</span>
                   <strong>Retrieved Evidence Chunk</strong>
-                  <span className="highlighter-page-pill">PAGE {currentPage}</span>
+                  <span className="highlighter-page-pill">
+                    PAGE {currentPage}
+                    {citation?.printed_page && String(citation.printed_page) !== String(currentPage)
+                      ? ` (Report P. ${citation.printed_page})`
+                      : ""}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -388,7 +416,12 @@ export default function PdfViewerModal({
                 <div className="pdf-full-highlight-bar">
                   <div className="bar-left">
                     <span className="bar-icon">⚡</span>
-                    <span className="bar-label">Highlighted Chunk on Page {currentPage}:</span>
+                    <span className="bar-label">
+                      Highlighted Chunk on Page {currentPage}
+                      {citation?.printed_page && String(citation.printed_page) !== String(currentPage)
+                        ? ` (Report P. ${citation.printed_page})`
+                        : ""}:
+                    </span>
                     <span className="bar-excerpt">&ldquo;{exactQuote.slice(0, 110)}...&rdquo;</span>
                   </div>
                   <button
