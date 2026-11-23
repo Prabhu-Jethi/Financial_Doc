@@ -167,18 +167,23 @@ class EvidenceService:
             seen_citations.add(cite_key)
 
             # Resolve 1-based physical PDF page index for viewer navigation
-            source_page = doc.metadata.get("page_number") or doc.metadata.get("physical_page")
-            if not source_page and doc.metadata.get("page_id"):
-                p_match = re.search(r"[-_]P?(\d+)", str(doc.metadata.get("page_id")), re.IGNORECASE)
-                if p_match:
-                    source_page = int(p_match.group(1))
-            if not source_page and doc.metadata.get("chunk_id"):
-                p_match = re.search(r"[-_]p(\d+)", str(doc.metadata.get("chunk_id")), re.IGNORECASE)
-                if p_match:
-                    source_page = int(p_match.group(1))
+            # Prioritize explicit physical_page or page_number from metadata
+            source_page = doc.metadata.get("physical_page") or doc.metadata.get("page_number")
+            
+            # Strictly match page number preceded by 'P' or 'p' in page_id or chunk_id
+            # Negative lookahead (?![a-zA-Z]) ensures '-10K' or '-10-k' is never misidentified as page 10
+            if not source_page:
+                for ident in [str(doc.metadata.get("page_id") or ""), str(doc.metadata.get("chunk_id") or "")]:
+                    if ident:
+                        p_match = re.search(r"(?:[-_\s]+P|[-_]p)(\d+)(?![a-zA-Z])", ident, re.IGNORECASE)
+                        if p_match:
+                            source_page = int(p_match.group(1))
+                            break
+
+            # Fallback to printed_page numeric string if physical index not found
             if not source_page:
                 try:
-                    p_clean = re.sub(r"\D", "", printed_page)
+                    p_clean = re.sub(r"\D", "", str(printed_page or ""))
                     if p_clean:
                         source_page = int(p_clean)
                 except Exception:
