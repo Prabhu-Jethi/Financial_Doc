@@ -1,0 +1,28 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ main, test]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH to EC2 & Update Docker Container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/Financial_Doc
+            git pull origin main
+            docker stop docintel-api || true
+            docker rm docintel-api || true
+            docker build -t docintel-backend:latest ./backend
+            docker run -d \
+              --name docintel-api \
+              --restart unless-stopped \
+              --env-file ./backend/.env \
+              -p 8000:8000 \
+              docintel-backend:latest
