@@ -5,6 +5,12 @@ import { fetchDocumentPdfUrl } from "../../../../../lib/server/api.js";
 
 export const dynamic = "force-dynamic";
 
+function sanitizeFilename(name) {
+  const base = String(name || "document.pdf").replace(/^.*[\\/]/, "");
+  const cleaned = base.replace(/["\r\n\0<>:\\/|?*]/g, "_").trim();
+  return cleaned || "document.pdf";
+}
+
 const DOC_FILE_MAP = {
   "AAPL-10K-2024": "10-Q4-2024-As-Filed.pdf",
   "AAPL-10K-2023": "_10-K-Q4-2023-As-Filed.pdf",
@@ -71,8 +77,9 @@ export async function GET(request, context) {
       }
     }
 
-    // 1. Check local data/originals/ disk directory
+    // 1. Check local data/originals/ disk directory (public built-in SEC filings only)
     if (fileName) {
+      const safeLocalName = sanitizeFilename(fileName);
       const filePath = path.resolve(process.cwd(), "..", "data", "originals", fileName);
       if (fs.existsSync(filePath)) {
         const fileBuffer = fs.readFileSync(filePath);
@@ -80,22 +87,31 @@ export async function GET(request, context) {
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
-            "Content-Disposition": `inline; filename="${fileName}"`,
+            "Content-Disposition": `inline; filename="${safeLocalName}"`,
             "Content-Length": fileBuffer.length.toString(),
             "Accept-Ranges": "bytes",
             "Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
           },
         });
       }
     }
 
     // 2. Resolve uploaded or cloud document via FastAPI pre-signed URL
-    const pdfMeta = await fetchDocumentPdfUrl(rawId);
+    const pdfRes = await fetchDocumentPdfUrl(rawId);
+    if (pdfRes && !pdfRes.ok && (pdfRes.status === 401 || pdfRes.status === 403)) {
+      return new NextResponse("Unauthorized to access this document.", {
+        status: pdfRes.status,
+        headers: { "Cache-Control": "no-store, private" },
+      });
+    }
+
+    const pdfMeta = pdfRes?.data;
     if (pdfMeta && pdfMeta.signed_url) {
       const remoteRes = await fetch(pdfMeta.signed_url);
       if (remoteRes.ok) {
         const fileBuffer = Buffer.from(await remoteRes.arrayBuffer());
-        const resolvedName = pdfMeta.file_name || fileName || `${rawId}.pdf`;
+        const resolvedName = sanitizeFilename(pdfMeta.file_name || fileName || "document.pdf");
         return new NextResponse(fileBuffer, {
           status: 200,
           headers: {
@@ -103,14 +119,21 @@ export async function GET(request, context) {
             "Content-Disposition": `inline; filename="${resolvedName}"`,
             "Content-Length": fileBuffer.length.toString(),
             "Accept-Ranges": "bytes",
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
           },
         });
       }
     }
 
-    return new NextResponse(`PDF document not found: ${rawId}`, { status: 404 });
+    return new NextResponse("PDF document not found.", {
+      status: 404,
+      headers: { "Cache-Control": "no-store, private" },
+    });
   } catch (err) {
-    return new NextResponse(`Error reading PDF filing: ${err.message}`, { status: 500 });
+    return new NextResponse("Error reading PDF filing.", {
+      status: 500,
+      headers: { "Cache-Control": "no-store, private" },
+    });
   }
 }

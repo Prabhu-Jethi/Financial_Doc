@@ -24,6 +24,7 @@ class FinancialRetriever(BaseRetriever):
     document_id: Optional[str] = None
     document_ids: Optional[List[str]] = None
     company: Optional[str] = None
+    user_id: Optional[str] = None
     min_similarity: float = 0.0
     embedding_service: ModelService = None
     db_url: str = settings.database_url
@@ -36,11 +37,27 @@ class FinancialRetriever(BaseRetriever):
             self.embedding_service = ModelService()
     
     def _build_where_filters(self, query: str) -> tuple[List[str], List[Any]]:
-        ## Reusable SQL where clauses for corpus status, document scoping, company and year
+        ## Reusable SQL where clauses for corpus status, tenant isolation, document scoping, company and year
         where_clauses = [
             "(corpus_version IN (SELECT version_id FROM corpus_versions WHERE status = 'ready') OR corpus_version IS NULL)"
         ]
         params: List[Any] = []
+
+        # 0. Strict Tenant & Guest Isolation:
+        # Guests can ONLY search public SEC benchmark filings (non-user uploads).
+        # Authenticated users can search public SEC filings PLUS only their own uploads.
+        if self.user_id:
+            where_clauses.append(
+                "document_id IN (SELECT document_id FROM documents "
+                "WHERE (source_url != 'user_upload' AND LEFT(document_id, 4) != 'doc_' AND user_id IS NULL) "
+                "OR user_id = %s)"
+            )
+            params.append(self.user_id)
+        else:
+            where_clauses.append(
+                "document_id IN (SELECT document_id FROM documents "
+                "WHERE source_url != 'user_upload' AND LEFT(document_id, 4) != 'doc_' AND user_id IS NULL)"
+            )
 
         # 1. Strict Document Scoping takes absolute priority
         if self.document_ids and len(self.document_ids) > 0:

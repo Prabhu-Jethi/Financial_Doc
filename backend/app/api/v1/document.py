@@ -8,14 +8,53 @@ from ...core.config import settings
 from ...integrations.storage import SupabaseStorageService
 from ...integrations.models import ModelService
 from ...core.security import get_current_user, get_optional_user, AuthenticatedUser
+from ...core.rate_limit import rate_limit
 from ...schemas import DocumentMetadataResponse, DocumentStatusResponse
 from ...parsers.factory import ParserFactory
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 storage_service = SupabaseStorageService()
 
+MAX_PDF_UPLOAD_BYTES = 30 * 1024 * 1024
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
+INGESTION_STATUS_TTL_SECONDS = 3600
+
+_limit_upload = rate_limit(5, 300, "upload")
+_limit_pdf = rate_limit(60, 60, "pdf")
+
 # In-memory progress tracker for live async ingestion status
 ingestion_status: Dict[str, Dict[str, Any]] = {}
+
+
+def _is_public_document(document_id: str, source_url: Optional[str], doc_user_id: Optional[str]) -> bool:
+    """Returns True only for built-in public SEC filings, never user-uploaded documents."""
+    return (
+        doc_user_id is None
+        and source_url != "user_upload"
+        and not str(document_id).startswith("doc_")
+    )
+
+
+def _authorize_document_access(
+    document_id: str,
+    source_url: Optional[str],
+    doc_user_id: Optional[str],
+    user: Optional[AuthenticatedUser],
+) -> None:
+    """Enforces strict owner-only access for user-uploaded documents."""
+    if _is_public_document(document_id, source_url, doc_user_id):
+        return
+    if not user or not user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to access this document.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if doc_user_id != user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this document.",
+        )
 
 
 def process_document_background(
@@ -24,7 +63,8 @@ def process_document_background(
     file_name: str,
     doc_type: str,
     file_hash: str,
-    user_id: str
+    user_id: str,
+    storage_key: Optional[str] = None
 ):
     """
     Asynchronous background ingestion pipeline.
@@ -132,7 +172,8 @@ def process_document_background(
             ingestion_status[doc_id]["updated_at"] = time.time()
 
         try:
-            storage_service.upload_document(temp_file_path, remote_filename=file_name)
+            remote_path = storage_key or f"uploads/{user_id}/{doc_id}.pdf"
+            storage_service.upload_document(temp_file_path, remote_filename=remote_path)
         except Exception as e:
             print(f"[Storage] Note: Background storage upload: {e}")
 
@@ -147,11 +188,12 @@ def process_document_background(
 
     except Exception as exc:
         print(f"[Background Ingestion Error] {doc_id}: {exc}")
+        safe_error = str(exc) if isinstance(exc, ValueError) else "Document processing failed."
         if doc_id in ingestion_status:
             ingestion_status[doc_id]["status"] = "failed"
             ingestion_status[doc_id]["progress"] = 0
-            ingestion_status[doc_id]["error"] = str(exc)
-            ingestion_status[doc_id]["current_step"] = f"Ingestion failed: {str(exc)}"
+            ingestion_status[doc_id]["error"] = safe_error
+            ingestion_status[doc_id]["current_step"] = f"Ingestion failed: {safe_error}"
             ingestion_status[doc_id]["updated_at"] = time.time()
         try:
             with psycopg.connect(settings.database_url) as conn:
@@ -216,9 +258,10 @@ def list_document(user: Optional[AuthenticatedUser] = Depends(get_optional_user)
 @router.get('/{document_id}/status', response_model=DocumentStatusResponse)
 def get_document_status(document_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
     """Pollable endpoint returning live progress of asynchronous document ingestion."""
-    # 1. Check in-memory live status
+    # 1. Check in-memory live status (owner-restricted)
     if document_id in ingestion_status:
         st = ingestion_status[document_id]
+        _authorize_document_access(document_id, "user_upload", st.get("user_id"), user)
         return DocumentStatusResponse(
             document_id=document_id,
             status=st["status"],
@@ -237,7 +280,8 @@ def get_document_status(document_id: str, user: Optional[AuthenticatedUser] = De
             cur.execute(
                 """
                 SELECT d.document_id, d.status, d.file_name, d.report_type,
-                       (SELECT count(*) FROM chunks c WHERE c.document_id = d.document_id)
+                       (SELECT count(*) FROM chunks c WHERE c.document_id = d.document_id),
+                       d.user_id, d.source_url
                 FROM documents d
                 WHERE d.document_id = %s;
                 """,
@@ -247,6 +291,8 @@ def get_document_status(document_id: str, user: Optional[AuthenticatedUser] = De
 
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    _authorize_document_access(document_id, row[6], row[5], user)
 
     db_status = row[1]
     chunks_count = row[4] or 0
@@ -266,21 +312,41 @@ def get_document_status(document_id: str, user: Optional[AuthenticatedUser] = De
     )
 
 
-@router.get('/{document_id}/pdf_url')
+@router.get('/{document_id}/pdf_url', dependencies=[Depends(_limit_pdf)])
 def get_document_pdf_url(document_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
-    """Generates signed URL for document PDF. Protected by authentication."""
+    """Generates signed URL for document PDF. Protected by document ownership authorization."""
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT file_name FROM documents WHERE document_id = %s;", (document_id,))
+            cur.execute(
+                "SELECT file_name, storage_path, user_id, source_url FROM documents WHERE document_id = %s;",
+                (document_id,)
+            )
             row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    file_name = row[0]
-    signed_url = storage_service.get_signed_url(remote_filename=file_name, expires_in_seconds=3600)
+
+    file_name, storage_path, doc_user_id, source_url = row
+    _authorize_document_access(document_id, source_url, doc_user_id, user)
+
+    is_public = _is_public_document(document_id, source_url, doc_user_id)
+    remote_key = file_name if is_public else (storage_path or file_name)
+
+    try:
+        signed_url = storage_service.get_signed_url(remote_filename=remote_key, expires_in_seconds=3600)
+    except Exception:
+        # Backward compatibility fallback for legacy uploads stored under raw file_name
+        if not is_public and remote_key != file_name:
+            try:
+                signed_url = storage_service.get_signed_url(remote_filename=file_name, expires_in_seconds=3600)
+            except Exception:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document PDF not found")
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document PDF not found")
+
     return {"document_id": document_id, "file_name": file_name, "signed_url": signed_url}
 
 
-@router.post('/upload', status_code=status.HTTP_202_ACCEPTED)
+@router.post('/upload', status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(_limit_upload)])
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...), 
@@ -291,20 +357,35 @@ async def upload_document(
     Accepts PDF uploads and dispatches asynchronous background ingestion.
     Returns HTTP 202 Accepted immediately so large PDFs never cause gateway timeouts.
     """
-    if not file.filename.lower().endswith(".pdf"):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
-    file_bytes = await file.read()
-    # Security: Enforce maximum file size (30MB) to prevent memory exhaustion DoS
-    if len(file_bytes) > 30 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large. Maximum supported PDF size is 30 MB.")
+    # Validate doc_type early before reading upload stream
+    ParserFactory.get_parser(doc_type)
+
+    # Security: Stream upload in bounded chunks to prevent memory exhaustion DoS
+    buffer = bytearray()
+    while True:
+        chunk = await file.read(UPLOAD_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        if len(buffer) + len(chunk) > MAX_PDF_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large. Maximum supported PDF size is 30 MB.")
+        buffer.extend(chunk)
+
+    file_bytes = bytes(buffer)
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded PDF file is empty.")
+
     # Security: Validate PDF magic bytes header to prevent MIME-type spoofing
     if not file_bytes.startswith(b"%PDF"):
         raise HTTPException(status_code=400, detail="Invalid PDF format: file header magic bytes mismatch.")
 
     file_hash = hashlib.sha256(file_bytes).hexdigest()
+    # Strip both POSIX and Windows directory components regardless of host OS
+    safe_display_name = re.split(r"[\\/]", file.filename)[-1] or "document.pdf"
 
-    # Fast path: Check if identical file was already ingested by SHA-256 hash
+    # Fast path: Check if identical file was already ingested by THIS user
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -313,15 +394,16 @@ async def upload_document(
                        (SELECT count(*) FROM chunks c WHERE c.document_id = d.document_id)
                 FROM documents d
                 WHERE d.file_hash_sha256 = %s
+                  AND d.user_id = %s
                 LIMIT 1;
                 """,
-                (file_hash,)
+                (file_hash, user.user_id)
             )
             existing = cur.fetchone()
             if existing and existing[3] == "ready":
                 return {
                     "document_id": existing[0],
-                    "file_name": existing[1] or file.filename,
+                    "file_name": existing[1] or safe_display_name,
                     "doc_type": existing[2],
                     "total_pages": 1,
                     "chunks_ingested": existing[4] or 1,
@@ -331,10 +413,11 @@ async def upload_document(
                     "message": "Document already ingested and ready."
                 }
 
-    doc_id = f"doc_{uuid.uuid4().hex[:8]}"
-    safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', os.path.basename(file.filename))
+    doc_id = f"doc_{uuid.uuid4().hex[:12]}"
+    safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', safe_display_name)
     temp_dir = tempfile.gettempdir()
     temp_file_path = os.path.join(temp_dir, f"{doc_id}_{safe_name}")
+    storage_key = f"uploads/{user.user_id}/{doc_id}.pdf"
 
     with open(temp_file_path, "wb") as f:
         f.write(file_bytes)
@@ -357,8 +440,8 @@ async def upload_document(
                     doc_type,
                     2026,
                     "user_upload",
-                    file.filename,
-                    f"uploads/{doc_id}.pdf",
+                    safe_display_name,
+                    storage_key,
                     file_hash,
                     "parsing",
                     user.user_id
@@ -366,10 +449,20 @@ async def upload_document(
             )
             conn.commit()
 
+    # Evict expired in-memory progress entries before inserting
+    now = time.time()
+    expired_ids = [
+        k for k, v in ingestion_status.items()
+        if now - v.get("updated_at", now) > INGESTION_STATUS_TTL_SECONDS
+    ]
+    for expired_id in expired_ids:
+        ingestion_status.pop(expired_id, None)
+
     # Initialize live in-memory progress tracker
     ingestion_status[doc_id] = {
         "document_id": doc_id,
-        "file_name": file.filename,
+        "user_id": user.user_id,
+        "file_name": safe_display_name,
         "doc_type": doc_type,
         "status": "parsing",
         "progress": 10,
@@ -377,7 +470,7 @@ async def upload_document(
         "total_pages": 0,
         "chunks_ingested": 0,
         "error": None,
-        "updated_at": time.time()
+        "updated_at": now
     }
 
     # Dispatch asynchronous background worker
@@ -385,15 +478,16 @@ async def upload_document(
         process_document_background,
         doc_id=doc_id,
         temp_file_path=temp_file_path,
-        file_name=file.filename,
+        file_name=safe_display_name,
         doc_type=doc_type,
         file_hash=file_hash,
-        user_id=user.user_id
+        user_id=user.user_id,
+        storage_key=storage_key
     )
 
     return {
         "document_id": doc_id,
-        "file_name": file.filename,
+        "file_name": safe_display_name,
         "doc_type": doc_type,
         "status": "parsing",
         "progress": 10,

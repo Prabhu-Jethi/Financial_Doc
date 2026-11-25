@@ -248,7 +248,8 @@ class AnswerService:
         question: str,
         company: Optional[str] = None,
         document_id: Optional[str] = None,
-        document_ids: Optional[List[str]] = None
+        document_ids: Optional[List[str]] = None,
+        user_id: Optional[str] = None
     ):
         ## Fast-path policy check (reuses lightweight helper)
         out_of_scope = check_out_of_scope(question)
@@ -259,26 +260,44 @@ class AnswerService:
         has_explicit_doc_scope = bool(document_id) or bool(document_ids and len(document_ids) > 0)
         detected_companies = detect_companies_in_query(question)
 
+        # Scope retriever per-request to guarantee strict tenant isolation without cross-request state leakage
+        target_company: Optional[str] = None
+        if not has_explicit_doc_scope:
+            if company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
+                if len(detected_companies) == 1:
+                    target_company = detected_companies[0]
+            else:
+                target_company = company
+
+        scoped_doc_ids = document_ids if document_ids else ([document_id] if document_id else None)
+
+        if isinstance(self.retriever, FinancialRetriever):
+            retriever = self.retriever.model_copy(
+                update={
+                    "user_id": user_id,
+                    "document_id": document_id if document_id else None,
+                    "document_ids": scoped_doc_ids,
+                    "company": target_company,
+                }
+            )
+        else:
+            retriever = self.retriever
+            if hasattr(retriever, "user_id"):
+                retriever.user_id = user_id
+
         ## 1. Retrieve evidence documents
         if not has_explicit_doc_scope and len(detected_companies) > 1:
             # Comparative retrieval ensures balanced representation across all mentioned companies
-            docs: List[Document] = self.retriever.retrieve_comparative(
+            docs: List[Document] = retriever.retrieve_comparative(
                 question, companies=detected_companies, top_k=10
             )
         else:
-            self.retriever.document_id = document_id if document_id else None
-            self.retriever.document_ids = document_ids if document_ids else ([document_id] if document_id else None)
-            if has_explicit_doc_scope:
-                self.retriever.company = None
-            elif company in ["All", "Cross-Company", None, "General", "General Document", "Uploaded Document"]:
-                if len(detected_companies) == 1:
-                    self.retriever.company = detected_companies[0]
-                else:
-                    self.retriever.company = None
-            else:
-                self.retriever.company = company
+            if not isinstance(self.retriever, FinancialRetriever):
+                retriever.document_id = document_id if document_id else None
+                retriever.document_ids = scoped_doc_ids
+                retriever.company = target_company
 
-            docs: List[Document] = self.retriever.invoke(question)
+            docs: List[Document] = retriever.invoke(question)
 
         # 2. Document Guardrail: Zero hallucination on empty retrieval
         if not docs:

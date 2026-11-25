@@ -3,6 +3,20 @@ import { createClient } from "../../../lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+function sanitizeRedirectPath(rawNext) {
+  if (typeof rawNext !== "string") return "/workspace";
+  const trimmed = rawNext.trim();
+  if (
+    !trimmed.startsWith("/") ||
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("/\\") ||
+    /[\r\n\t\0]/.test(trimmed)
+  ) {
+    return "/workspace";
+  }
+  return trimmed;
+}
+
 /**
  * OAuth 2.0 PKCE Callback Handler.
  * Receives the authorization code from Google OAuth redirect,
@@ -46,8 +60,8 @@ export async function GET(request) {
     }
   }
 
-  // 3. Successful exchange: Redirect to workspace
-  const next = requestUrl.searchParams.get("next") || "/workspace";
-  return NextResponse.redirect(new URL(next, request.url));
+  // 3. Successful exchange: Redirect to validated internal workspace path
+  const next = sanitizeRedirectPath(requestUrl.searchParams.get("next"));
+  return NextResponse.redirect(new URL(next, requestUrl.origin));
 }
 
