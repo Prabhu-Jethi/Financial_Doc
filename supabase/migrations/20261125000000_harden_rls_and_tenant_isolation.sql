@@ -33,7 +33,7 @@ FOR SELECT
 TO authenticated
 USING (
     (source_url != 'user_upload' AND LEFT(document_id, 4) != 'doc_' AND user_id IS NULL)
-    OR auth.uid() = user_id
+    OR auth.uid()::text = user_id::text
 );
 
 -- Unauthenticated guests (anon) can ONLY read public SEC benchmark filings
