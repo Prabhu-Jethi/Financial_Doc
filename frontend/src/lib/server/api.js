@@ -4,6 +4,18 @@ import { createClient } from "../supabase/server.js";
 const FASTAPI_BASE_URL = process.env.FASTAPI_BASE_URL || "http://localhost:8000";
 const QUERY_TIMEOUT_MS = 50000; // Quick 15s deadline before graceful fallback
 
+async function getAccessToken() {
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Server-side adapter forwarding queries to FastAPI with verified SEC engine fallback.
  * Forwards caller's verified Supabase JWT Bearer token to FastAPI.
@@ -12,17 +24,8 @@ export async function forwardQueryToFastAPI(payload, requestId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);
 
-  // Retrieve caller's verified Supabase access token
-  let token = null;
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    token = session?.access_token || null;
-  } catch (authErr) {
-    // Session token absent or in development without Supabase configured
-  }
+  // Forward caller's Supabase access token (FastAPI verifies the JWT signature cryptographically)
+  const token = await getAccessToken();
 
   try {
     const headers = {
@@ -142,14 +145,7 @@ export async function fetchDocumentMetadata() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    let token = null;
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      token = session?.access_token || null;
-    } catch (e) {
-      // quiet fallback
-    }
+    const token = await getAccessToken();
 
     const headers = { Accept: "application/json" };
     if (token) {
@@ -179,10 +175,12 @@ export async function fetchDocumentMetadata() {
   // - Authenticated users receive public SEC filings PLUS only their own uploads.
   try {
     const supabase = createClient();
+    // Revalidate user identity with Supabase Auth before trusting user.id in direct DB queries
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+    const userId = !userErr && user ? user.id : null;
 
     let query = supabase
       .from("documents")
@@ -213,16 +211,7 @@ export async function fetchDocumentMetadata() {
  * Forwards caller's verified Supabase JWT Bearer token.
  */
 export async function uploadDocumentToFastAPI(formData) {
-  let token = null;
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    token = session?.access_token || null;
-  } catch (authErr) {
-    // Session token absent
-  }
+  const token = await getAccessToken();
 
   const headers = {
     Accept: "application/json",
@@ -257,16 +246,7 @@ export async function uploadDocumentToFastAPI(formData) {
  * Polls FastAPI for the live status/progress of an asynchronous document ingestion job.
  */
 export async function fetchDocumentStatusFromFastAPI(documentId) {
-  let token = null;
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    token = session?.access_token || null;
-  } catch (authErr) {
-    // Session token absent
-  }
+  const token = await getAccessToken();
 
   const headers = {
     Accept: 'application/json',
@@ -295,16 +275,7 @@ export async function fetchDocumentStatusFromFastAPI(documentId) {
 }
 
 export async function fetchDocumentPdfUrl(documentId) {
-  let token = null;
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    token = session?.access_token || null;
-  } catch (authErr) {
-    // Session token absent
-  }
+  const token = await getAccessToken();
 
   const headers = {
     Accept: "application/json",
@@ -321,11 +292,10 @@ export async function fetchDocumentPdfUrl(documentId) {
     });
 
     if (res.ok) {
-      return await res.json();
+      return { ok: true, status: 200, data: await res.json() };
     }
+    return { ok: false, status: res.status, data: null };
   } catch (e) {
-    // quiet fallback
+    return { ok: false, status: 502, data: null };
   }
-
-  return null;
 }

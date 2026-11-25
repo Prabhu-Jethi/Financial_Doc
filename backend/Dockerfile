@@ -23,6 +23,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code into container
 COPY . /app/
 
+# Create non-root user for container security
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --ingroup appgroup appuser && \
+    chown -R appuser:appgroup /app
+
+USER appuser
+
 # Expose FastAPI listening port
 EXPOSE 8000
 

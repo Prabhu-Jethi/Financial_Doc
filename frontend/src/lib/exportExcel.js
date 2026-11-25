@@ -3,6 +3,22 @@
  * Opens natively in Microsoft Excel, Apple Numbers, and Google Sheets with live formulas!
  */
 
+function escapeXml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function sanitizeSpreadsheetText(value) {
+  const str = String(value ?? "");
+  // Prevent Excel formula / DDE injection without mangling standalone "-" placeholders
+  const neutralized = /^[ \t\r\n]*([=+@]|-[A-Za-z=(])/.test(str) ? `'${str}` : str;
+  return escapeXml(neutralized);
+}
+
 export function exportFinancialModelToExcel(item) {
   const company = item.company || "Corporate Disclosure";
   const title = item.comparison_table?.title || `DocIntel Analysis - ${company}`;
@@ -18,10 +34,10 @@ export function exportFinancialModelToExcel(item) {
     const clean = str.replace(/[$,\s]/g, "");
     if (clean.endsWith("%")) {
       const val = parseFloat(clean.replace("%", ""));
-      return isNaN(val) ? null : val / 100;
+      return Number.isFinite(val) ? val / 100 : null;
     }
     const val = parseFloat(clean);
-    return isNaN(val) ? null : val;
+    return Number.isFinite(val) ? val : null;
   };
 
   // Build Excel XML Rows with live dynamic formulas
@@ -41,29 +57,29 @@ export function exportFinancialModelToExcel(item) {
 
     const priorCell = priorNum !== null
       ? `<Cell ss:StyleID="sNum"><Data ss:Type="Number">${priorNum}</Data></Cell>`
-      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${row.prior_period || "-"}</Data></Cell>`;
+      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${sanitizeSpreadsheetText(row.prior_period || "-")}</Data></Cell>`;
 
     const currCell = currNum !== null
       ? `<Cell ss:StyleID="sNumBold"><Data ss:Type="Number">${currNum}</Data></Cell>`
-      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${row.current_period || "-"}</Data></Cell>`;
+      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${sanitizeSpreadsheetText(row.current_period || "-")}</Data></Cell>`;
 
     // If both are valid numbers, generate true Excel formulas
     const varDollarCell = (currNum !== null && priorNum !== null)
       ? `<Cell ss:StyleID="sNum" ss:Formula="=RC[-1]-RC[-2]"><Data ss:Type="Number">${currNum - priorNum}</Data></Cell>`
-      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${row.variance_dollar || "-"}</Data></Cell>`;
+      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${sanitizeSpreadsheetText(row.variance_dollar || "-")}</Data></Cell>`;
 
     const varPctCell = (currNum !== null && priorNum !== null && priorNum !== 0)
       ? `<Cell ss:StyleID="sPercent" ss:Formula="=(RC[-2]-RC[-3])/RC[-3]"><Data ss:Type="Number">${(currNum - priorNum) / priorNum}</Data></Cell>`
-      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${row.variance_pct || "-"}</Data></Cell>`;
+      : `<Cell ss:StyleID="sText"><Data ss:Type="String">${sanitizeSpreadsheetText(row.variance_pct || "-")}</Data></Cell>`;
 
     tableRowsXml += `
       <Row>
-        <Cell ss:StyleID="sMetric"><Data ss:Type="String">${row.metric}</Data></Cell>
+        <Cell ss:StyleID="sMetric"><Data ss:Type="String">${sanitizeSpreadsheetText(row.metric)}</Data></Cell>
         ${priorCell}
         ${currCell}
         ${varDollarCell}
         ${varPctCell}
-        <Cell ss:StyleID="sSource"><Data ss:Type="String">${row.source || company + " 10-K"}</Data></Cell>
+        <Cell ss:StyleID="sSource"><Data ss:Type="String">${sanitizeSpreadsheetText(row.source || `${company} 10-K`)}</Data></Cell>
       </Row>`;
   });
 
@@ -85,10 +101,10 @@ export function exportFinancialModelToExcel(item) {
       ${item.citations.map((c, i) => `
         <Row>
           <Cell ss:StyleID="sTextCenter"><Data ss:Type="Number">${i + 1}</Data></Cell>
-          <Cell ss:StyleID="sText"><Data ss:Type="String">${c.company || company}</Data></Cell>
-          <Cell ss:StyleID="sTextCenter"><Data ss:Type="String">Page ${c.printed_page}</Data></Cell>
-          <Cell ss:StyleID="sText"><Data ss:Type="String">${c.section || "Financial Statements"}</Data></Cell>
-          <Cell ss:MergeAcross="1" ss:StyleID="sQuote"><Data ss:Type="String">${c.exact_quote ? c.exact_quote.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : "-"}</Data></Cell>
+          <Cell ss:StyleID="sText"><Data ss:Type="String">${sanitizeSpreadsheetText(c.company || company)}</Data></Cell>
+          <Cell ss:StyleID="sTextCenter"><Data ss:Type="String">${sanitizeSpreadsheetText(`Page ${c.printed_page}`)}</Data></Cell>
+          <Cell ss:StyleID="sText"><Data ss:Type="String">${sanitizeSpreadsheetText(c.section || "Financial Statements")}</Data></Cell>
+          <Cell ss:MergeAcross="1" ss:StyleID="sQuote"><Data ss:Type="String">${sanitizeSpreadsheetText(c.exact_quote || "-")}</Data></Cell>
         </Row>
       `).join("")}
     `;
@@ -201,21 +217,21 @@ export function exportFinancialModelToExcel(item) {
    <Column ss:Width="280"/>
 
    <Row ss:Height="24">
-    <Cell ss:MergeAcross="5" ss:StyleID="sTitle"><Data ss:Type="String">${title}</Data></Cell>
+    <Cell ss:MergeAcross="5" ss:StyleID="sTitle"><Data ss:Type="String">${sanitizeSpreadsheetText(title)}</Data></Cell>
    </Row>
    <Row ss:Height="18">
-    <Cell ss:MergeAcross="5" ss:StyleID="sMeta"><Data ss:Type="String">Scope: ${company} • Period: ${period} • Generated: ${dateStr} • DocIntel Verification</Data></Cell>
+    <Cell ss:MergeAcross="5" ss:StyleID="sMeta"><Data ss:Type="String">${sanitizeSpreadsheetText(`Scope: ${company} • Period: ${period} • Generated: ${dateStr} • DocIntel Verification`)}</Data></Cell>
    </Row>
    <Row ss:Height="10"></Row>
 
    <!-- Table Headers -->
    <Row ss:Height="22">
-    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${columns[0] || "Financial Metric"}</Data></Cell>
-    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${columns[1] || "Prior Period"}</Data></Cell>
-    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${columns[2] || "Current Period"}</Data></Cell>
-    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${columns[3] || "Variance ($)"}</Data></Cell>
-    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${columns[4] || "Variance (%)"}</Data></Cell>
-    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${columns[5] || "Source Filing"}</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${sanitizeSpreadsheetText(columns[0] || "Financial Metric")}</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${sanitizeSpreadsheetText(columns[1] || "Prior Period")}</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${sanitizeSpreadsheetText(columns[2] || "Current Period")}</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${sanitizeSpreadsheetText(columns[3] || "Variance ($)")}</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${sanitizeSpreadsheetText(columns[4] || "Variance (%)")}</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">${sanitizeSpreadsheetText(columns[5] || "Source Filing")}</Data></Cell>
    </Row>
 
    <!-- Table Data Rows with Formulas -->

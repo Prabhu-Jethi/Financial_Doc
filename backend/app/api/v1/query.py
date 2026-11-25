@@ -5,10 +5,12 @@ from fastapi import APIRouter, Header, Depends
 from ...schemas import QueryRequest, QueryResponse
 from ...services.answering import AnswerService, check_out_of_scope
 from ...core.security import get_optional_user, AuthenticatedUser
+from ...core.rate_limit import rate_limit
 
 router = APIRouter(prefix="/query", tags=["Query"])
 
 _answering_service = None
+_limit_query = rate_limit(20, 60, "query")
 
 
 def get_answering_service() -> AnswerService:
@@ -19,7 +21,7 @@ def get_answering_service() -> AnswerService:
     return _answering_service
 
 
-@router.post("", response_model=QueryResponse)
+@router.post("", response_model=QueryResponse, dependencies=[Depends(_limit_query)])
 def execute_query(
     req: QueryRequest,
     x_request_id: str = Header(default=None),
@@ -58,7 +60,8 @@ def execute_query(
         question=req.question,
         company=req.company,
         document_id=req.document_id,
-        document_ids=doc_ids
+        document_ids=doc_ids,
+        user_id=user.user_id if user else None
     )
 
     elapsed_ms = (time.time() - start_time) * 1000

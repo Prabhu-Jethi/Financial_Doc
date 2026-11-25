@@ -14,8 +14,9 @@ logger = logging.getLogger(__name__)
 # Security scheme for FastAPI Swagger and route injection
 security = HTTPBearer(auto_error=False)
 
-# In-memory cache for JWKS public keys to avoid fetching on every single query
+# In-memory cache for JWKS client/keys to avoid instantiating a new HTTP client per request
 _JWKS_CACHE: Dict[str, Any] = {"keys": None, "fetched_at": 0}
+_JWKS_CLIENT_CACHE: Dict[str, Any] = {"url": None, "client": None}
 JWKS_CACHE_TTL_SECONDS = 3600  # 1 hour cache
 
 
@@ -36,6 +37,21 @@ def get_jwks_url() -> str:
     """Returns the official Supabase project JWKS endpoint."""
     base_url = settings.supabase_url.rstrip("/")
     return f"{base_url}/auth/v1/.well-known/jwks.json"
+
+
+def get_cached_jwk_client():
+    """Returns a cached PyJWKClient instance for the configured JWKS URL."""
+    from jwt import PyJWKClient
+
+    jwks_url = get_jwks_url()
+    if _JWKS_CLIENT_CACHE["client"] is None or _JWKS_CLIENT_CACHE["url"] != jwks_url:
+        _JWKS_CLIENT_CACHE["url"] = jwks_url
+        _JWKS_CLIENT_CACHE["client"] = PyJWKClient(
+            jwks_url,
+            cache_keys=True,
+            lifespan=JWKS_CACHE_TTL_SECONDS,
+        )
+    return _JWKS_CLIENT_CACHE["client"]
 
 
 def fetch_supabase_jwks() -> Optional[Dict[str, Any]]:
@@ -85,17 +101,18 @@ def verify_supabase_jwt(token: str) -> AuthenticatedUser:
 
     decoded_payload = None
 
-    # Strategy A: Verify via Supabase JWT Secret (HS256) if provided in settings/.env
-    jwt_secret = getattr(settings, "supabase_jwt_secret", None) or settings.supabase_secret_key
+    # Strategy A: Verify via explicit Supabase JWT Secret (HS256) if provided
+    jwt_secret = getattr(settings, "supabase_jwt_secret", None)
     if jwt_secret:
         try:
-            decoded_payload = jwt.decode(
-                token,
-                jwt_secret,
-                algorithms=["HS256"],
-                audience=expected_audience,
-                options={"verify_exp": True, "verify_aud": True},
-            )
+            decode_kwargs: Dict[str, Any] = {
+                "algorithms": ["HS256"],
+                "audience": expected_audience,
+                "options": {"verify_exp": True, "verify_aud": True},
+            }
+            if expected_issuer:
+                decode_kwargs["issuer"] = expected_issuer
+            decoded_payload = jwt.decode(token, jwt_secret, **decode_kwargs)
         except jwt.InvalidAlgorithmError:
             pass  # Token is signed with RS256/ES256, fall back to JWKS
         except jwt.ExpiredSignatureError:
@@ -105,12 +122,12 @@ def verify_supabase_jwt(token: str) -> AuthenticatedUser:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except jwt.InvalidTokenError as e:
-            logger.debug(f"HS256 secret verification skipped: {e}")
+            logger.debug(f"HS256 secret verification failed: {e}")
 
     # Strategy B: Verify via Asymmetric JWKS (RS256 / ES256)
     if decoded_payload is None and settings.supabase_url:
         try:
-            jwks_client = PyJWKClient(get_jwks_url())
+            jwks_client = get_cached_jwk_client()
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             decoded_payload = jwt.decode(
                 token,
@@ -127,10 +144,10 @@ def verify_supabase_jwt(token: str) -> AuthenticatedUser:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except Exception as e:
-            logger.error(f"JWKS token verification failed: {e}")
+            logger.warning(f"JWKS token verification failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid or untrusted authentication token: {str(e)}",
+                detail="Invalid or untrusted authentication token.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 

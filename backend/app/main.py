@@ -1,15 +1,20 @@
+import logging
 import psycopg
 import uvicorn
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .core.config import settings
 from .api.v1.router import api_router
 
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.app_name,
-    version=settings.app_version
+    version=settings.app_version,
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
 )
 
 app.add_middleware(
@@ -17,19 +22,33 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"]
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if request.url.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store, private")
+    return response
+
 
 app.include_router(api_router, prefix="/api/v1")
 
 @app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])
 def root():
-    return {
+    payload = {
         "message": f"Welcome to {settings.app_name}",
         "version": settings.app_version,
-        "docs_url": "/docs",
         "health_check": "/health/ready",
     }
+    if settings.debug:
+        payload["docs_url"] = "/docs"
+    return payload
 
 @app.api_route("/health/live", methods=["GET", "HEAD"], tags=["Health"])
 def health_live():
@@ -52,9 +71,10 @@ def health_ready():
         return {"status": "ready", 
                 "database": "connected"}
     except Exception as e:
+        logger.warning(f"Database readiness check failed: {e}")
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-            content={"status": "not ready", "error": str(e)})
+            content={"status": "not ready", "error": str(e) if settings.debug else "Database connectivity check failed."})
     
 
 

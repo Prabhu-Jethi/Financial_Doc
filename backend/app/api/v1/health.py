@@ -1,8 +1,10 @@
+import logging
 import psycopg
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from ...core.config import settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/health", tags=["Health"])
 
 @router.get("/live")
@@ -24,7 +26,9 @@ def health_ready():
                 cur.fetchone()
         return {"status": "ready", "database": "connected"}
     except Exception as e:
+        logger.warning(f"Database readiness check failed: {e}")
         return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"status": "not ready", "error": str(e)}
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not ready", "error": str(e) if settings.debug else "Database connectivity check failed."}
         )
         
