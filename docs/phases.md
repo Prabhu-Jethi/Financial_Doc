@@ -1,8 +1,8 @@
 # 🟧 phases.md — Step-by-Step Architecture & Release Phases
 
-**Financial Report Analysis Assistant & Document Intelligence Platform** · v1.7 · 5 November 2026
+**Financial Report Analysis Assistant & Document Intelligence Platform** · v1.10 · 25 November 2026
 
-> 🟢 **Phase 1 through Phase 6.7 Verified Complete**: The platform has progressed through foundational ground truth curation, hybrid retrieval, microservice authentication, general document parsing, Docker containerization, responsive design, CI/CD automation, and empirical QA benchmarking. The development benchmark verified **20/20 (100.0%) pass** with **100% calculation precision** and **100% zero-hallucination rate**.
+> 🟢 **Phase 1 through Phase 6.11 Verified Complete**: The platform has progressed through ground truth curation, hybrid retrieval, 3-layer microservice auth with Guest Explorer Mode, general PDF parsing, Zero-PyTorch OpenAI `text-embedding-3-small` migration (~60MB container), 8-defect v1.9 audit remediation, theme persistence, physical-to-printed PDF page alignment (`DEC-070`), and automated **AWS EC2 Docker CD** (`.github/workflows/cd.yml`) paired with Vercel SSR. Verified at **20/20 (100.0%) pass on DEV-20** with **100% zero-hallucination rate** and **60 deterministic unit tests**.
 
 [Requirements](Trd.md) · [Architecture](Architecture.md) · [Rules](rules.md) · [Phases](phases.md) · [Memory](memory.md)
 
@@ -15,7 +15,7 @@ flowchart TD
     P0["P0: System Planning & Scoping"] --> P1["P1: SEC 10-K Ground Truth Curation"]
     P1 --> P2["P2: Traceable Ingestion & pgvector Schema"]
     P2 --> P3["P3: Fixed RAG & Workspace Interface"]
-    P3 --> P4["P4: Hybrid RAG & 52-Test Deterministic Suite"]
+    P3 --> P4["P4: Hybrid RAG & Deterministic Test Suite"]
     P4 --> AUTH["P4.5: 3-Layer Auth & Modular Architecture"]
     AUTH --> P5["P5: Pluggable General PDF Parser Engine"]
     P5 --> P6["P6: Production Docker Containerization"]
@@ -26,11 +26,15 @@ flowchart TD
     P64 --> P65["P6.5: Universal Responsive UI (Tablet & Mobile)"]
     P65 --> P66["P6.6: Offline-Gated CI/CD & Fast-Path Guardrail"]
     P66 --> P67["P6.7: Scale-Aware Grounding & 100% DEV Benchmark"]
-    P67 --> P7["P7: Bounded Agentic Retrieval (Optional V4)"]
+    P67 --> P68["P6.8: OpenAI 1536-d Embeddings & Zero-PyTorch Slim"]
+    P68 --> P69["P6.9: v1.9 Audit, Guest Mode & Tenant Scoping"]
+    P69 --> P610["P6.10: Theme Persistence & Physical PDF Page Offset Fix"]
+    P610 --> P611["P6.11: AWS EC2 Container Host & Auto-CD Pipeline"]
+    P611 --> P7["P7: Two-Tier Caching & Bounded Agentic (Optional)"]
 
     classDef green fill:#DCFCE7,stroke:#16A34A,color:#14532D
     classDef purple fill:#EDE9FE,stroke:#7C3AED,color:#3B0764
-    class P0,P1,P2,P3,P4,AUTH,P5,P6,P61,P62,P63,P64,P65,P66,P67 green
+    class P0,P1,P2,P3,P4,AUTH,P5,P6,P61,P62,P63,P64,P65,P66,P67,P68,P69,P610,P611 green
     class P7 purple
 ```
 
@@ -43,18 +47,22 @@ flowchart TD
 | **P1 — Ground Truth** | 11 official SEC 10-K reports (AAPL, MSFT, AMZN, META) downloaded and hashed; 20 verified dev questions with audited ground-truth references. | 🟩 Complete |
 | **P2 — Traceable Ingestion** | `pdfplumber` cell matrix extraction, accounting number normalizer, narrative chunking, and 9-table Supabase relational catalog. | 🟩 Complete |
 | **P3 — Fixed RAG Workspace** | Conversational workspace, floating composer dock, right-hand citation inspector drawer, and grounded LLM answering service. | 🟩 Complete |
-| **P4 — Hybrid RAG & Testing** | Dense vector search combined with PostgreSQL lexical full-text search via Reciprocal Rank Fusion ($k=60$), 52-case unit test suite (100% pass). | 🟩 Complete |
+| **P4 — Hybrid RAG & Testing** | Dense vector search combined with PostgreSQL lexical full-text search via Reciprocal Rank Fusion ($k=60$), expanded to 60-case unit test suite. | 🟩 Complete |
 | **P4.5 — 3-Layer Auth** | Next.js SSR session cookies, Google OAuth 2.0 PKCE, FastAPI cryptographic JWKS verification, Supabase RLS, and modular frontend structure. | 🟩 Complete |
 | **P5 — General PDF Parser** | Pluggable `BaseParser` subsystem, Markdown table reconstruction, sliding-window chunker, `POST /documents/upload` endpoint, and dual-section sidebar. | 🟩 Complete |
-| **P6 — Containerization** | Multi-stage Docker builds (`backend/Dockerfile` with CPU-optimized PyTorch, `frontend/Dockerfile` on Node 20 Alpine), `docker-compose.yml`, bridge network. | 🟩 Complete |
+| **P6 — Containerization** | Multi-stage Docker builds (`backend/Dockerfile` slim Python 3.12, `frontend/Dockerfile` on Node 20 Alpine), `docker-compose.yml`, bridge network. | 🟩 Complete |
 | **P6.1 — Hardening & Async** | 30 MB file quota, `%PDF-` magic byte check, SHA-256 deduplication, memory hygiene cache flushes, and async background task worker. | 🟩 Complete |
 | **P6.2 — State Persistence** | Instant `localStorage` lazy initializers for analyses, active thread, user documents, and settings, eliminating page-reload vanish. | 🟩 Complete |
 | **P6.3 — Scoping & Isolation** | Strict `document_id`/`document_ids` priority routing, retriever company filter bypass, dynamic citation labeling for non-SEC files. | 🟩 Complete |
-| **P6.4 — Retrieval Acceleration** | pgvector HNSW index (`idx_chunks_embedding_hnsw`), HuggingFace Inference API with automatic local fallback, eliminates sequential table scans. | 🟩 Complete |
+| **P6.4 — Retrieval Acceleration** | pgvector HNSW index (`idx_chunks_embedding_hnsw`) eliminating sequential table scans. | 🟩 Complete |
 | **P6.5 — Responsive UI Overhaul** | 5-tier responsive layout (desktop, <=1024px tablet drawers, <=640px mobile phones, 16px iOS font lock, safe-area insets). | 🟩 Complete |
-| **P6.6 — CI/CD Automation** | GitHub Actions workflow (`.github/workflows/ci.yml`), offline environment testing (`HF_HUB_OFFLINE=1`), fast-path query guardrail, Vercel preview deploys. | 🟩 Complete |
-| **P6.7 — Empirical QA Benchmark** | Scale-aware numerical grounding ($N / 1000$ billion conversion), LaTeX grouping normalization, primary reported unit prompting, 20/20 (100%) DEV benchmark pass. | 🟩 Complete |
-| **P7 — Bounded Agentic (V4)** | Evidence gap detection, targeted single-retry query rewriting, multi-step financial reconciliation. | ⬜ Optional Future |
+| **P6.6 — CI/CD Automation** | GitHub Actions CI workflow (`.github/workflows/ci.yml`), offline unit testing, fast-path query guardrail, Vercel preview deploys. | 🟩 Complete |
+| **P6.7 — Empirical QA Benchmark** | Scale-aware numerical grounding ($N / 1000$ billion conversion), LaTeX grouping normalization, primary reported unit prompting, 20/20 (100%) DEV pass. | 🟩 Complete |
+| **P6.8 — Zero-PyTorch Embeddings** | Migrated to OpenAI `text-embedding-3-small` (1536-dim) via API, re-embedded 6,174 Supabase chunks, cut container RAM from ~450MB to ~60MB. | 🟩 Complete |
+| **P6.9 — Guest Mode & v1.9 Audit** | Fixed BUG-001..008 (comparative quotas, 2-col PDF spacing, optimistic skeleton), enabled Guest Explorer Mode (`DEC-067`), isolated user uploads (`DEC-068`). | 🟩 Complete |
+| **P6.10 — Theme & Page Offset Fix** | Zero-flash inline theme script (`DEC-069`); fixed `-10K` regex collision in `evidence.py` & `retrieval.py` + `resolvePhysicalPage()` dual-badge (`DEC-070`). | 🟩 Complete |
+| **P6.11 — AWS EC2 Always-On CD** | Migrated backend FastAPI container to AWS EC2 Ubuntu host (0s cold start) with automated SSH deploy via `.github/workflows/cd.yml`. | 🟩 Complete |
+| **P7 — Caching & Agentic (V4)** | Two-tier L1/L2 Redis query cache for cost reduction, bounded retry query rewriting, multi-step financial reconciliation. | ⬜ Optional Future |
 
 ---
 
@@ -220,3 +228,48 @@ flowchart TD
   - **RELEASE-40 Benchmark (`release_eval_report_hybrid_20261103_195708.json`)**:
     - **Cases Passed**: **24/40 (60.0%)** (jumped from 13/40, 32.5%)
     - **Zero-Hallucination Rate**: **100.0%** across all 40 held-out cases.
+
+---
+
+### P6.8 — OpenAI 1536-Dim Embeddings & Zero-PyTorch Slim Container (Complete)
+
+- [x] **API-Driven Embedding Migration (`backend/app/integrations/models.py`)**:
+  - Migrated from local `sentence-transformers/all-MiniLM-L6-v2` (384-dim) to OpenAI `text-embedding-3-small` (1536-dim) via `OpenAIEmbeddings`.
+  - Re-embedded all 6,174 Supabase `chunks` rows and updated `idx_chunks_embedding_hnsw` to `vector(1536)`.
+- [x] **Lightweight Docker Image (`backend/Dockerfile`, `backend/requirements.txt`)**:
+  - Removed PyTorch/Torchvision/Transformers layers, shrinking backend container runtime RAM from ~450MB down to ~60MB and boot time to < 1.5s.
+
+---
+
+### P6.9 — v1.9 Engineering Audit, Guest Explorer Mode & Tenant Isolation (Complete)
+
+- [x] **8-Defect v1.9 Remediation (BUG-001 through BUG-008)**:
+  - Balanced comparative retrieval quotas (`retrieve_comparative()`), optimistic loading skeleton + XSS-safe bold parsing (`MessageThread.jsx`), 2-column text flow spacing (`gen_pdf_parser.py`), dynamic upload scoping, ticker filter wrapping, and PDF outline suppression.
+- [x] **Guest Explorer Mode & Ingestion Barrier (`DEC-067` / `DEC-068`)**:
+  - Configured `get_optional_user` across `/api/v1/query`, `/api/v1/documents`, `/api/v1/documents/{id}/status`, and `/api/v1/documents/{id}/pdf_url` so guests can freely explore all 11 SEC 10-K filings.
+  - Enforced mandatory authentication (`get_current_user` -> HTTP 401) on `POST /api/v1/documents/upload` with an in-modal sign-in barrier card (`UploadModal.jsx`).
+  - Strictly scoped uploaded documents (`user_id = user.id`) so new accounts and guest sessions always display an empty **My Uploaded Documents** drawer.
+  - Expanded offline deterministic unit test suite to **60 cases** (`backend/tests/unit/`).
+
+---
+
+### P6.10 — Theme Persistence & Physical-to-Printed PDF Page Offset Alignment (Complete)
+
+- [x] **Zero-Flash Theme Persistence (`DEC-069`)**:
+  - Fixed premature `useEffect` return inside `frontend/src/app/page.jsx` that prevented theme, resize, and settings restoration across reloads.
+  - Injected synchronous inline script in `<head>` of `frontend/src/app/layout.jsx` to apply `docintel_theme` before first paint; styled `.btn-modal-secondary` (`globals.css`) and explicit card clicks (`SettingsModal.jsx`).
+- [x] **Physical-to-Printed PDF Page Offset Alignment (`DEC-070`)**:
+  - Fixed critical regex collision in `backend/app/services/evidence.py` where `[-_]P?(\d+)` matched `-10` from `10-K` document IDs, causing all citations to scroll to Page 10.
+  - Added strict `(?:[-_\s]+P|[-_]p)(\d+)(?![a-zA-Z])` extraction in `evidence.py` and `retrieval.py` (with `import re`), plus frontend safeguard `resolvePhysicalPage()` and dual report badge `PAGE {currentPage} (Report P. {printed_page})` in `PdfViewerModal.jsx`.
+  - Verified with 3 regression unit tests in `test_citations.py` and clean Next.js build.
+
+---
+
+### P6.11 — AWS EC2 Always-On Backend & Automated GitHub Actions CD (Complete)
+
+- [x] **AWS EC2 Container Host**:
+  - Migrated FastAPI backend container (`docintel-api`) from Render Free Tier to an always-on **AWS EC2 Ubuntu** host (2GB swapfile, port 8000, `--restart unless-stopped`), eliminating 45s cold starts and monthly instance-hour exhaustion.
+- [x] **Automated Continuous Deployment (`.github/workflows/cd.yml`)**:
+  - Configured SSH-based GitHub Actions deployment workflow triggering on pushes to `main` and `test` to automatically pull commits, rebuild `docintel-backend:latest`, and restart `docintel-api`.
+- [x] **Vercel Hybrid Integration**:
+  - Wired Vercel Next.js 14 BFF (`https://docintel-sage.vercel.app`) to EC2 via `FASTAPI_BASE_URL` with `Supabase` handling PostgreSQL `pgvector`, Auth, and private PDF storage.

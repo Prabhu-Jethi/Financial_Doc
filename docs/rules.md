@@ -1,8 +1,8 @@
 # 🟩 rules.md — Standards to follow
 
-**Financial Report Analysis Assistant & Document Intelligence Platform** · v1.4 · 21 October 2026
+**Financial Report Analysis Assistant & Document Intelligence Platform** · v1.5 · 25 November 2026
 
-> 🟩 **Application implementation in progress.** Standards active across 3-layer microservice authentication (Next.js SSR cookies + FastAPI JWKS + Supabase RLS), modular frontend workspace (`workspace/`, `modals/`, `auth/`, `hooks/`), deterministic Decimal calculation engine, Phase 4 Hybrid RAG retrieval, and the pluggable General PDF Parser subsystem (additional feature).
+> 🟩 **Production standards active across hybrid cloud deployment.** Governance enforced across 3-layer microservice authentication (Next.js SSR cookies + FastAPI optional/strict JWKS + Supabase RLS), Guest Explorer Mode (`DEC-067`) vs. isolated user uploads (`DEC-068`), modular frontend workspace (`workspace/`, `modals/`, `auth/`, `hooks/`), deterministic Decimal calculation engine, OpenAI 1536-dim Hybrid RAG retrieval, physical-to-printed PDF page alignment (`DEC-070`), and the pluggable General PDF Parser subsystem.
 
 [Requirements](Trd.md) · [Architecture](Architecture.md) · [Rules](rules.md) · [Phases](phases.md) · [Memory](memory.md)
 
@@ -76,11 +76,11 @@ Planning edits are authorized; application implementation awaits the user's inst
 | Area | Standard |
 |---|---|
 | Python | Type hints, Pydantic boundaries, small modules, formatter/linter such as Ruff. |
-| Testing | Deterministic `pytest` unit test suite in `backend/tests/` (sub-second, zero-cost, covering math, extraction, provenance, contracts). |
+| Testing | Deterministic `pytest` unit test suite in `backend/tests/unit/` (60 cases, zero-cost, covering math, extraction, provenance, contracts). |
 | SQL | Parameterized queries, migrations, constraints, explicit transactions; no model/network wait within a transaction. |
 | Next.js | App Router + React + JavaScript; thin Route Handlers; server-only backend adapter. |
 | Frontend Organization | Domain modularity: `components/workspace/` (views), `components/modals/` (dialogs), `components/auth/` (credentials/roles), `hooks/` (state lifecycle), `lib/constants.js` (tokens/badges). |
-| Parser Subsystem | Pluggable interface: `backend/app/parsers/base.py` (`BaseParser`), specialized parsers (`sec_10k.py`, `general_pdf.py`), and dynamic dispatch (`factory.py`). |
+| Parser Subsystem | Pluggable interface: `backend/app/parsers/base.py` (`BaseParser`), specialized parsers (`sec_10k_parser.py`, `gen_pdf_parser.py`), and dynamic dispatch (`factory.py`). |
 | API contracts | Versioned OpenAPI-derived types plus runtime validation; stable errors/request IDs. |
 | Dependencies | Separate Python/frontend manifests and one lockfile per environment. **CRITICAL**: Never execute `npm install` or `pip install` autonomously; point required dependencies to the user first. |
 | CPU-heavy work | Parsing/embedding/reranking off the API event loop; offline indexing first. |
@@ -94,8 +94,8 @@ Planning edits are authorized; application implementation awaits the user's inst
 |---|---|
 | Secrets | Server-only; no service role keys or backend secrets in NEXT_PUBLIC_, Git, prompts, logs or browser responses. |
 | Layer 1: Client/SSR | Next.js handles PKCE authentication and persists tokens exclusively in `HttpOnly`, `SameSite=Lax`, `Secure` cookies via `@supabase/ssr`. |
-| Layer 2: API Gateway | FastAPI validates Bearer tokens cryptographically against Supabase JWKS (`/.well-known/jwks.json`). Injects decoded payload into `request.state.user`. Rejects unverified or expired tokens with 401. |
-| Layer 3: Database / RLS | Supabase PostgreSQL enforces Row-Level Security: public read for benchmark SEC filings (`doc_type = 'sec_10k'`), strict isolation for user-uploaded general documents (`user_id = auth.uid()`). |
+| Layer 2: API Gateway | FastAPI validates Bearer tokens cryptographically against Supabase JWKS / JWT secret (`get_optional_user` allowing Guest Explorer Mode on curated SEC 10-Ks; `get_current_user` rejecting unverified or expired tokens on private routes/uploads with 401). |
+| Layer 3: Database / RLS | Supabase PostgreSQL enforces Row-Level Security: public read for benchmark SEC filings (`doc_type = 'sec_10k'`, open to Guest Mode), strict isolation for user-uploaded documents (`user_id = auth.uid()`). |
 | Caching | Disable route/fetch/CDN caching for generated answers and identity-specific data. |
 | Query states | Pending, cancel, partial, gaps, clarification, error; prevent duplicate/stale requests. |
 | Display | Safe Markdown without raw HTML; validated citation links; accessible labels/keyboard/narrow-screen behavior. |
