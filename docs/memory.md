@@ -1,8 +1,8 @@
 # 🟩 memory.md — Current State & Project Memory
 
-**Financial Report Analysis Assistant & Document Intelligence Platform** · v1.8 · 15 November 2026
+**Financial Report Analysis Assistant & Document Intelligence Platform** · v1.10 · 25 November 2026
 
-> 🟢 **Project Milestone (v1.8)**: Upgraded embedding architecture to **OpenAI `text-embedding-3-small` (1536-dim)** via direct API access (`EXPLABS_API_KEY`), completely eliminating heavy local PyTorch dependencies from Render. All 6,174 database chunks in Supabase were re-embedded and indexed with HNSW (`vector(1536)`). Container memory footprint plummeted from ~450MB down to ~60MB, and cold-start startup dropped from 25s to under 1.5s. Empirical verification achieved **20/20 (100.0%) pass on DEV-20**, **100.0% zero-hallucination rate**, and all 52 unit tests passing in 4.09s.
+> 🟢 **Project Milestone (v1.10)**: Completed **Guest Explorer Mode (`DEC-067`)**, **Multi-Tenant Upload Isolation (`DEC-068`)**, **Zero-Flash Theme Persistence (`DEC-069`)**, **Physical-to-Printed PDF Page Offset Alignment (`DEC-070`)**, and **AWS EC2 Containerized CD Pipeline (`DEC-071`)** via `.github/workflows/cd.yml`. Backend FastAPI container runs always-on in Docker on AWS EC2 (~60MB RAM, zero PyTorch, zero cold-starts) powered by OpenAI `text-embedding-3-small` (1536-dim) + Supabase PostgreSQL `pgvector` HNSW, while Vercel serves the Next.js 14 SSR BFF (`https://docintel-sage.vercel.app`). Verified with **20/20 (100.0%) pass on DEV-20**, **100.0% zero-hallucination rate**, and **60 deterministic unit tests**.
 
 [Requirements](Trd.md) · [Architecture](Architecture.md) · [Rules](rules.md) · [Phases](phases.md) · [Memory](memory.md)
 
@@ -12,25 +12,28 @@
 
 | 🟩 Completed & Verified | 🟨 Operational & Monitoring | ⬜ Future Explorations |
 |---|---|---|
-| Complete 5-document planning suite (v1.8) | Render background keep-alive ping (`/health/live`) | Phase 7: Bounded agentic retrieval (V4) |
-| Eleven SEC 10-K filings indexed (AAPL, MSFT, AMZN, META) | Vercel custom domain mapping | Multi-modal charts and diagram ingestion |
-| 6,174 vector chunks & 544 tables cataloged in Supabase | Live portfolio presentation & defense | |
+| Complete 5-document planning suite (v1.10) | Live Vercel + AWS EC2 + Supabase hybrid cloud | Two-tier L1 RAM + L2 Redis query cache |
+| Eleven SEC 10-K filings indexed (AAPL, MSFT, AMZN, META) | Live portfolio presentation & defense | Phase 7: Bounded agentic retrieval (V4) |
+| 6,174 vector chunks & 544 tables cataloged in Supabase | | Multi-modal charts and diagram ingestion |
 | **OpenAI `text-embedding-3-small` 1536-dim API embeddings** | | |
-| **Zero-PyTorch Render deployment footprint (~60MB RAM)** | | |
+| **Zero-PyTorch AWS EC2 Docker deployment (~60MB RAM, 0s cold start)** | | |
+| **Automated CD Pipeline to AWS EC2 (`.github/workflows/cd.yml`)** | | |
+| **Guest Explorer Mode + Isolated User Uploads (`DEC-067` / `DEC-068`)** | | |
+| **Zero-Flash Theme Persistence (`DEC-069`)** | | |
+| **Calibrated Physical-to-Printed PDF Page Alignment (`DEC-070`)** | | |
 | Deterministic Decimal calculation ledger (`calculations.py`) | | |
 | Scale-aware evidence validation auditor (`evidence.py`) | | |
 | Automated benchmark harness (`eval_benchmark.py`) | | |
 | **DEV-20 Benchmark: 20/20 Passed (100.0% Accuracy, 100% Grounded)** | | |
 | **RELEASE-40 Benchmark: 100.0% Zero-Hallucination Rate** | | |
-| 52-case deterministic pytest suite (100% pass in 4.09s) | | |
+| **60-case deterministic pytest suite (`backend/tests/unit/`)** | | |
 | Out-of-scope fast-path query guardrail (`query.py`) | | |
-| GitHub Actions automated CI/CD pipeline (`ci.yml`) | | |
-| Vercel automated preview & production deploy flow | | |
+| GitHub Actions automated CI pipeline (`.github/workflows/ci.yml`) | | |
 | Hybrid retrieval: pgvector dense + Postgres lexical (RRF $k=60$) | | |
 | Retrieval depth calibration ($top\_k=10, candidate\_limit=20$) | | |
 | 3-layer microservice auth (Next.js SSR + FastAPI JWKS + Supabase RLS) | | |
 | Modular frontend architecture (`workspace/`, `modals/`, `auth/`, `hooks/`) | | |
-| General PDF parser engine with Markdown table extraction (`pdfplumber`) | | |
+| General PDF parser engine with 2-col flow & Markdown tables (`pdfplumber`) | | |
 | Strict document scoping (zero cross-document SEC contamination) | | |
 | pgvector HNSW index migration on 1536-dim vectors (`idx_chunks_embedding_hnsw`) | | |
 | Universal responsive UI (Desktop, <=1024px iPad, <=640px Mobile) | | |
@@ -143,6 +146,10 @@ flowchart TD
 | **DEC-066** | PDF Viewer Outline Suppression & Iframe Spinner | Appended `&pagemode=none&navpanes=0` to suppress browser PDF drawer and added centered loading overlay. | Implemented |
 | **DEC-067** | Guest Explorer Mode & Authless Ingestion Barrier | Allowed unauthenticated visitors to freely explore and query SEC 10-K filings, compare matrices, and inspect citations; enforced mandatory authentication (HTTP 401) on `POST /upload` with in-modal sign-in barrier card. | Implemented |
 | **DEC-068** | User-Scoped Uploaded Documents & Empty Guest State | Isolated `list_document` query and client state by `user_id` so new and guest users receive an empty uploaded documents section; any user-uploaded document (general, SEC 10-K, or calculation) routes exclusively to that user's uploaded list. | Implemented |
+| **DEC-069** | Zero-Flash Theme Persistence Across Refresh | Removed premature `useEffect` return in `page.jsx`, injected synchronous inline `<head>` script in `layout.jsx` reading `docintel_theme`, added explicit theme choice triggers in `SettingsModal.jsx`, and styled `.btn-modal-secondary`. | Implemented |
+| **DEC-070** | Physical-to-Printed PDF Page Offset Alignment | Replaced `[-_]P?(\d+)` with strict `(?:[-_\s]+P\|[-_]p)(\d+)(?![a-zA-Z])` in `evidence.py` and `retrieval.py` so `-10K` never resolves to Page 10; added `resolvePhysicalPage()` guard and dual `PAGE {phys} (Report P. {print})` badge in `PdfViewerModal.jsx`. | Implemented |
+| **DEC-071** | AWS EC2 Container Host & GitHub Actions CD | Ported FastAPI container (`docintel-api`) to AWS EC2 Ubuntu (zero cold-starts, eliminating Render 750h quota limits) with automated SSH rebuild/restart via `.github/workflows/cd.yml` on `main` and `test`. | Implemented |
+| **DEC-072** | Full Documentation & README Synchronization | Audited live production deployment (`docintel-sage.vercel.app`) and synchronized `README.md`, `Architecture.md`, `Trd.md`, `phases.md`, `rules.md`, and `memory.md` to v1.10 (60 unit tests, 1536-dim embeddings, Guest Mode, EC2 CD). | Implemented |
 
 ---
 
@@ -150,10 +157,10 @@ flowchart TD
 
 - **Primary Source Evidence**: 11 official Form 10-K reports in `data/originals/` registered with SHA-256 hashes in `source_manifest.jsonl`.
 - **Relational Integrity**: Vector chunks must reference valid parent `document_id` and `page_id` foreign keys.
-- **Dimensionality Strictness**: Vector column dimension in PostgreSQL must strictly match embedding model output (384 dimensions for MiniLM).
+- **Dimensionality Strictness**: Vector column dimension in PostgreSQL must strictly match embedding model output (**1536 dimensions** for OpenAI `text-embedding-3-small`).
 - **Hybrid Retrieval Balance**: Reciprocal Rank Fusion ($k=60$) balances dense semantic similarity and sparse lexical keyword matches.
-- **Audited Mathematical Ledgers**: Every derived metric must trace to explicit operands, source statements, and printed page citations.
-- **Multi-Tenant Privacy**: Private uploaded documents and user query history remain isolated by `user_id = auth.uid()` via Supabase RLS.
+- **Audited Mathematical Ledgers**: Every derived metric must trace to explicit operands, source statements, and calibrated physical + printed page citations.
+- **Multi-Tenant Privacy**: Private uploaded documents and user query history remain isolated by `user_id = auth.uid()` via Supabase RLS while curated SEC 10-Ks remain open to Guest Explorer Mode.
 
 ---
 
@@ -193,3 +200,5 @@ flowchart TD
 | 19 Nov 2026 | Multi-Tenant Upload Scoping & Hermetic CI (DEC-068) | Scoped uploaded documents strictly to authenticated owners (`user_id = user.id`); guaranteed empty upload drawer for guests and new accounts; hermetically mocked psycopg connection in `test_access.py` (57 tests passing). |
 | 20 Nov 2026 | Theme Persistence Across Page Refresh & Button Polish (DEC-069) | Resolved premature `useEffect` return bug in `page.jsx` preventing theme, resize, and settings restoration; injected synchronous inline script in `layout.jsx` eliminating refresh flash; styled `.btn-modal-secondary` for `[Done]` action. Verified with 57 unit tests and clean Next.js build. |
 | 23 Nov 2026 | Physical-to-Printed PDF Page Offset Alignment (DEC-070) | Resolved critical regex bug where `[-_]P?(\d+)` matched `-10` from `10-K` in SEC filings, causing all citations to scroll to Page 10; strictly enforced `P(\d+)` page delimiter in `evidence.py` and `retrieval.py`; added dual-badge rendering `Page {phys} (Report P. {print})` and `resolvePhysicalPage()` in `PdfViewerModal.jsx`. Verified with 10 citation unit tests and Next.js production build. |
+| 24 Nov 2026 | AWS EC2 Migration & Automated CD Pipeline (DEC-071) | Added missing `import re` in `retrieval.py` (`45ea33b`), configured `.github/workflows/cd.yml` for automated SSH Docker deployment (`docintel-api`) to AWS EC2 on pushes to `main` and `test`, and switched live Vercel proxy to EC2. |
+| 25 Nov 2026 | Full Documentation & README Sync (DEC-072) | Updated `README.md`, `Architecture.md`, `Trd.md`, `phases.md`, `rules.md`, and `memory.md` to v1.10 reflecting 60-case unit suite, 1536-dim OpenAI embeddings, Guest Explorer Mode, DEC-069/070 fixes, and AWS EC2 + Vercel + Supabase topology. |
