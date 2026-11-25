@@ -1,3 +1,4 @@
+import re
 import psycopg
 from typing import List, Optional, Any, Dict
 from pydantic import ConfigDict
