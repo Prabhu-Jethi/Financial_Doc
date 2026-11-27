@@ -41,7 +41,7 @@ function renderFormattedText(text) {
   return parts.map((part, idx) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={idx} className="font-semibold text-white">
+        <strong key={idx} className="font-semibold">
           {part.slice(2, -2)}
         </strong>
       );

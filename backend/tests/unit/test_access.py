@@ -216,6 +216,30 @@ class TestAccessAndContracts:
             assert "user_id = %s" in executed_query
             assert executed_params == ("test_user_id",)
 
+    def test_reupload_failed_document_updates_existing_record_instead_of_duplicate_insert(self):
+        """Re-uploading a PDF whose prior ingestion failed must reuse/update the existing record instead of hitting uq_documents_user_hash."""
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = ("doc_failed123", "report.pdf", "general", "failed", 0)
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("app.api.v1.document.psycopg.connect", return_value=mock_conn), \
+             patch("app.api.v1.document.process_document_background") as mock_bg:
+            response = self.client.post(
+                "/api/v1/documents/upload",
+                files={"file": ("report.pdf", b"%PDF-1.4 sample content", "application/pdf")},
+                data={"doc_type": "general"}
+            )
+
+        assert response.status_code == 202
+        data = response.json()
+        assert data["document_id"] == "doc_failed123"
+        executed_sqls = [call.args[0] for call in mock_cur.execute.call_args_list]
+        assert any("UPDATE documents" in sql for sql in executed_sqls)
+        assert not any("INSERT INTO documents" in sql for sql in executed_sqls)
+        mock_bg.assert_called_once()
+
 
 
 def main():

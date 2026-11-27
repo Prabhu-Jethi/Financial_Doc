@@ -33,7 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest pytest-asyncio
 
-      - name: Run Deterministic Unit Tests (52 Cases)
+      - name: Run Deterministic Unit Tests (76 Cases)
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
           SUPABASE_URL: "https://mock-supabase.supabase.co"

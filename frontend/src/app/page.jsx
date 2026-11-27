@@ -118,6 +118,9 @@ export default function Home() {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         const nextUser = session?.user || null;
         setCurrentUser(nextUser);
+        if (!nextUser) {
+          setSelectedDocIds((prev) => prev.filter((id) => !String(id).startsWith("doc_")));
+        }
         fetchDocuments(nextUser);
       });
 
@@ -512,20 +515,27 @@ export default function Home() {
 
       // Persist permanently in user's cloud account forever (ChatGPT-style)
       try {
+        const historyPayload = {
+          question: q,
+          company: queryCompany || "All",
+          reporting_periods: queryPeriod || period ? [queryPeriod || period] : [],
+          answer_text: data.answer_text,
+          citations: data.citations || [],
+          calculations: data.calculations || [],
+          timings_ms: data.timings_ms || {},
+        };
+
         fetch("/api/history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: q,
-            company: queryCompany || "All",
-            reporting_periods: queryPeriod || period ? [queryPeriod || period] : [],
-            answer_text: data.answer_text,
-            citations: data.citations || [],
-            calculations: data.calculations || [],
-            timings_ms: data.timings_ms || {},
-          }),
+          body: JSON.stringify(historyPayload),
         })
-          .then((r) => r.json())
+          .then(async (r) => {
+            if (!r.ok) {
+              throw new Error(`History API returned HTTP ${r.status}`);
+            }
+            return r.json();
+          })
           .then((saved) => {
             if (saved?.item?.id) {
               setHistory((current) =>
@@ -535,28 +545,17 @@ export default function Home() {
               );
             }
           })
-          .catch(() => {});
-
-        // Direct browser client fallback to Supabase table
-        if (currentUser?.id) {
-          const supabase = createClient();
-          supabase
-            .from("user_query_history")
-            .insert([
-              {
-                user_id: currentUser.id,
-                question: q,
-                company: queryCompany || "All",
-                reporting_periods: queryPeriod || period ? [queryPeriod || period] : [],
-                answer_text: data.answer_text,
-                citations: data.citations || [],
-                calculations: data.calculations || [],
-                timings_ms: data.timings_ms || {},
-              },
-            ])
-            .then(() => {})
-            .catch(() => {});
-        }
+          .catch(() => {
+            // Direct browser client fallback to Supabase table only if server route failed
+            if (currentUser?.id) {
+              const supabase = createClient();
+              supabase
+                .from("user_query_history")
+                .insert([{ user_id: currentUser.id, ...historyPayload }])
+                .then(() => {})
+                .catch(() => {});
+            }
+          });
       } catch (e) {}
 
       // If response includes citations, set active in inspector
@@ -624,6 +623,7 @@ export default function Home() {
         },
       ];
       setMessages(restored);
+      setActiveCitation(hItem.result.citations?.[0] || null);
       try {
         localStorage.setItem("docintel_active_messages", JSON.stringify(restored));
       } catch (e) {}

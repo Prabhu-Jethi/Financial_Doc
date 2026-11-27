@@ -10,6 +10,7 @@ export async function GET() {
     frontend: "ok",
     backend_live: backendHealth.live,
     database_ready: backendHealth.ready,
+    active_engine: backendHealth.active_engine,
     timestamp: new Date().toISOString(),
   });
 }

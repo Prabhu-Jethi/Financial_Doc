@@ -74,6 +74,10 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded, curre
       setUploadError("Only PDF documents (.pdf) are supported by the intelligence parser.");
       return;
     }
+    if (file.size > 30 * 1024 * 1024) {
+      setUploadError("File too large. Maximum supported PDF size is 30 MB.");
+      return;
+    }
     setSelectedFile(file);
     // Infer document title or company name from filename
     const baseName = file.name
@@ -416,7 +420,7 @@ export default function UploadModal({ isOpen, onClose, onDocumentUploaded, curre
                   <span className="dropzone-chip">PDF Document</span>
                   <span className="dropzone-chip">Contracts &amp; Invoices</span>
                   <span className="dropzone-chip">SEC 10-K</span>
-                  <span className="dropzone-chip">Max 50MB</span>
+                  <span className="dropzone-chip">Max 30MB</span>
                 </div>
               </div>
             </div>

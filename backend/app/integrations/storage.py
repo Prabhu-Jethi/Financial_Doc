@@ -75,8 +75,8 @@ class SupabaseStorageService:
         if isinstance(res, dict):
             if "error" in res and res["error"]:
                 raise ValueError(f"Supabase Storage Error: {res.get('message', res['error'])}")
-            ## extract url
-            raw_url = res.get("signedURL") or res.get("signedURL")
+            ## extract url (supabase-py versions return either signedURL or signedUrl)
+            raw_url = res.get("signedURL") or res.get("signedUrl")
             if raw_url:
                 if raw_url.startswith("/"):
                     return f"{self.supabase_url}{raw_url}"

@@ -15,8 +15,9 @@ class LangchainPostgresVector:
             chunk_type: str = None,
     ) -> List[Dict[str, Any]]:
         ### Executes native cosine similarity search: 1 - embedding <=> queryvector
+        vec_str = f"[{','.join(str(x) for x in query_embedding)}]"
         filters = []
-        params = [query_embedding]
+        params = [vec_str]
 
         if document_id:
             filters.append("document_id = %s")
@@ -24,7 +25,7 @@ class LangchainPostgresVector:
         if chunk_type:
             filters.append("chunk_type = %s")
             params.append(chunk_type)
-        where_clause = f"Where {' AND '.join(filters)}" if filters else ""
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
 
         ## order by cosine similarity operator
         query = f"""
@@ -42,7 +43,7 @@ class LangchainPostgresVector:
         ORDER BY embedding <=> %s::vector ASC
         LIMIT %s;
         """
-        params.extend([query_embedding, top_k])
+        params.extend([vec_str, top_k])
 
         results = []
         with psycopg.connect(self.db_url) as conn:

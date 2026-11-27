@@ -16,7 +16,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/Financial_Doc
-            git pull origin main
+            git pull origin ${{ github.ref_name }}
             docker stop docintel-api || true
             docker rm docintel-api || true
             docker build -t docintel-backend:latest ./backend
