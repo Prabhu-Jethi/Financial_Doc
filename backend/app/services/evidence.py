@@ -291,10 +291,15 @@ class EvidenceService:
 
         # From calculations
         for calc in calculations:
-            evidence_pool.add(calc.display_value)
-            evidence_pool.add(calc.display_value.replace(",", ""))
+            disp = str(calc.display_value).strip()
+            evidence_pool.add(disp)
+            evidence_pool.add(disp.replace(",", ""))
+            evidence_pool.add(disp.lstrip("+-"))
+            evidence_pool.add(disp.replace(",", "").lstrip("+-"))
             for op in calc.operands:
-                evidence_pool.add(op.raw_value.replace("$", "").replace(",", "").replace("%", "").strip())
+                clean_op = op.raw_value.replace("$", "").replace(",", "").replace("%", "").strip()
+                evidence_pool.add(clean_op)
+                evidence_pool.add(clean_op.strip("()+-"))
 
         # From verified facts
         for fact in facts:
@@ -326,15 +331,16 @@ class EvidenceService:
                         try:
                             clean_ev = str(ev).replace("$", "").replace("%", "").replace(",", "").strip()
                             ev_dec = Decimal(clean_ev)
-                            if ev_dec > 100:
-                                ev_decimals.append(ev_dec)
+                            ev_abs = abs(ev_dec)
+                            if ev_abs > 100:
+                                ev_decimals.append(ev_abs)
                                 # Scale conversion: evidence is in millions, answer token is in billions
-                                scaled_ev = ev_dec / Decimal(1000)
-                                if abs(scaled_ev - dec_val) < Decimal("0.15") or abs(ev_dec - (dec_val * Decimal(1000))) < Decimal("150"):
+                                scaled_ev = ev_abs / Decimal(1000)
+                                if abs(scaled_ev - dec_val) < Decimal("0.15") or abs(ev_abs - (dec_val * Decimal(1000))) < Decimal("150"):
                                     is_found = True
                                     break
-                            # Percentage or small difference tolerance (e.g. 0.30% vs +0.30%)
-                            if abs(ev_dec - dec_val) < Decimal("0.05"):
+                            # Percentage or small difference tolerance (e.g. 0.30% vs +0.30%, -2.80% vs 2.80%)
+                            if abs(ev_dec - dec_val) < Decimal("0.05") or abs(ev_abs - dec_val) < Decimal("0.05"):
                                 is_found = True
                                 break
                         except (InvalidOperation, TypeError):

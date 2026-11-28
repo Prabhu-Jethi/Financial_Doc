@@ -276,6 +276,79 @@ class TestFinancialRetriever:
         companies3 = detect_companies_in_query("What was Apple's total net sales in FY2024?")
         assert companies3 == ["Apple Inc."]
 
+    def test_query_lexical_returns_all_rows_and_handles_empty(self):
+        """_query_lexical must return every row from cursor.fetchall() and [] when empty."""
+        from unittest.mock import MagicMock
+
+        mock_rows = [
+            ("CHK_1", "AAPL-10K-2024", "AAPL-10K-2024 - P029", "TBL_1", "table_row_group", "Total net sales $391,035", {"printed_page": "29"}, 0.92),
+            ("CHK_2", "AAPL-10K-2024", "AAPL-10K-2024 - P030", None, "narrative", "Gross margin discussion", {"printed_page": "30"}, 0.75),
+            ("CHK_3", "AAPL-10K-2024", "AAPL-10K-2024 - P031", None, "narrative", "Operating income summary", {"printed_page": "31"}, 0.61),
+        ]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = mock_rows
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("app.services.retrieval.psycopg.connect", return_value=mock_conn):
+            docs = self.retriever._query_lexical("Total net sales", ["document_id = %s"], ["AAPL-10K-2024"])
+
+        assert len(docs) == 3
+        assert [d.metadata["chunk_id"] for d in docs] == ["CHK_1", "CHK_2", "CHK_3"]
+        assert [d.metadata["lexical_rank"] for d in docs] == [1, 2, 3]
+        assert docs[0].metadata["physical_page"] == 29
+
+        mock_cur.fetchall.return_value = []
+        with patch("app.services.retrieval.psycopg.connect", return_value=mock_conn):
+            empty_docs = self.retriever._query_lexical("nonexistent", ["document_id = %s"], ["AAPL-10K-2024"])
+        assert empty_docs == []
+
+    def test_sec_10k_parser_produces_one_based_page_numbers(self):
+        """Sec10kParser must emit 1-based page_number matching GeneralPDFParser and DB pages."""
+        from app.parsers.sec_10k_parser import Sec10kParser
+        from app.services.ingestion import ExtractedPage, SearchChunk
+
+        fake_pages = [
+            ExtractedPage(page_id="DOC - P001", document_id="DOC", physical_page_index=0, printed_page="1", raw_text="Page one content"),
+            ExtractedPage(page_id="DOC - P002", document_id="DOC", physical_page_index=1, printed_page="2", raw_text="Page two content"),
+        ]
+        fake_chunks = [
+            SearchChunk(chunk_id="DOC - P001 - CHK01", document_id="DOC", chunk_type="narrative", content="Page one content", page_id="DOC - P001", table_id=None, metadata={}),
+            SearchChunk(chunk_id="DOC - P002 - CHK01", document_id="DOC", chunk_type="narrative", content="Page two content", page_id="DOC - P002", table_id=None, metadata={}),
+        ]
+
+        with patch("app.parsers.sec_10k_parser.PDFDocumentReader") as mock_reader_cls, \
+             patch("app.parsers.sec_10k_parser.ChunkBuilder.build_narrative_chunks", return_value=fake_chunks), \
+             patch("app.parsers.sec_10k_parser.ChunkBuilder.build_table_chunks", return_value=[]):
+            mock_reader_cls.return_value.extract_content.return_value = (fake_pages, [])
+            parsed = Sec10kParser().parse("dummy.pdf", "DOC")
+
+        assert [c.page_number for c in parsed.chunks] == [1, 2]
+
+    def test_database_vector_search_serializes_pgvector_string(self):
+        """LangchainPostgresVector.similiarity_search must format embedding as pgvector string '[...]'."""
+        from unittest.mock import MagicMock
+        from app.integrations.database import LangchainPostgresVector
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = [
+            ("CHK_1", "AAPL-10K-2024", "P029", None, "narrative", "Net sales", {"printed_page": "29"}, 0.91)
+        ]
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        vect = LangchainPostgresVector(db_url="postgresql://mock")
+        with patch("app.integrations.database.psycopg.connect", return_value=mock_conn):
+            res = vect.similiarity_search([0.1, 0.2, 0.3], top_k=3, document_id="AAPL-10K-2024")
+
+        assert len(res) == 1
+        executed_sql, executed_params = mock_cur.execute.call_args[0]
+        assert "WHERE document_id = %s" in executed_sql
+        assert executed_params == ["[0.1,0.2,0.3]", "AAPL-10K-2024", "[0.1,0.2,0.3]", 3]
+
 
 
 def main():

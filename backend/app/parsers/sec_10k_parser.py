@@ -13,7 +13,8 @@ class Sec10kParser(BaseParser):
         tab_chunks = ChunkBuilder.build_table_chunks(tables)
 
         all_search_chunks = nar_chunks + tab_chunks
-        page_map = {p.page_id: p.physical_page_index for p in pages}
+        # ExtractedPage.physical_page_index is 0-based; normalize to 1-based page numbers
+        page_map = {p.page_id: p.physical_page_index + 1 for p in pages}
         parsed_chunks = []
         for sc in all_search_chunks:
             parsed_chunks.append(

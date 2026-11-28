@@ -133,7 +133,8 @@ export default function PdfViewerModal({
     const parts = text.split(regex);
 
     return parts.map((part, i) => {
-      if (regex.test(part)) {
+      // String.split with a single capturing group places matched tokens at odd indices (avoiding stateful /g .test())
+      if (i % 2 === 1 && part) {
         return (
           <mark key={i} className="evidence-mark-metric" title="Audited Financial Metric Anchor">
             {part}

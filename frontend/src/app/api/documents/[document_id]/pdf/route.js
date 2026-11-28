@@ -51,7 +51,7 @@ export async function GET(request, context) {
 
     let fileName = DOC_FILE_MAP[normalizedId] || DOC_FILE_MAP[ALIASES[lowerId]];
 
-    if (!fileName) {
+    if (!fileName && !lowerId.startsWith("doc_")) {
       if (lowerId.includes("apple") || lowerId.includes("aapl")) {
         fileName = lowerId.includes("2023")
           ? "_10-K-Q4-2023-As-Filed.pdf"

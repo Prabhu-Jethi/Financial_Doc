@@ -319,7 +319,7 @@ export default function SettingsModal({
                   </div>
                   <div className="spec-row">
                     <span className="spec-label">Embedding Architecture:</span>
-                    <span className="spec-value font-mono">sentence-transformers/all-MiniLM-L6-v2 (384 Dimensions)</span>
+                    <span className="spec-value font-mono">OpenAI text-embedding-3-small (1536 Dimensions)</span>
                   </div>
                   <div className="spec-row">
                     <span className="spec-label">PDF Processing:</span>

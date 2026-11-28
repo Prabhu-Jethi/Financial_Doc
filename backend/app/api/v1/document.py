@@ -386,6 +386,7 @@ async def upload_document(
     safe_display_name = re.split(r"[\\/]", file.filename)[-1] or "document.pdf"
 
     # Fast path: Check if identical file was already ingested by THIS user
+    existing_doc_id = None
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -400,20 +401,33 @@ async def upload_document(
                 (file_hash, user.user_id)
             )
             existing = cur.fetchone()
-            if existing and existing[3] == "ready":
-                return {
-                    "document_id": existing[0],
-                    "file_name": existing[1] or safe_display_name,
-                    "doc_type": existing[2],
-                    "total_pages": 1,
-                    "chunks_ingested": existing[4] or 1,
-                    "status": "ready",
-                    "progress": 100,
-                    "current_step": "Document already ingested and ready.",
-                    "message": "Document already ingested and ready."
-                }
+            if existing:
+                if existing[3] == "ready":
+                    return {
+                        "document_id": existing[0],
+                        "file_name": existing[1] or safe_display_name,
+                        "doc_type": existing[2],
+                        "total_pages": 1,
+                        "chunks_ingested": existing[4] or 1,
+                        "status": "ready",
+                        "progress": 100,
+                        "current_step": "Document already ingested and ready.",
+                        "message": "Document already ingested and ready."
+                    }
+                if existing[3] == "parsing":
+                    st = ingestion_status.get(existing[0], {})
+                    return {
+                        "document_id": existing[0],
+                        "file_name": existing[1] or safe_display_name,
+                        "doc_type": existing[2] or doc_type,
+                        "status": "parsing",
+                        "progress": st.get("progress", 25),
+                        "current_step": st.get("current_step", "Document ingestion already in progress."),
+                        "message": "Document ingestion already in progress."
+                    }
+                existing_doc_id = existing[0]
 
-    doc_id = f"doc_{uuid.uuid4().hex[:12]}"
+    doc_id = existing_doc_id or f"doc_{uuid.uuid4().hex[:12]}"
     safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', safe_display_name)
     temp_dir = tempfile.gettempdir()
     temp_file_path = os.path.join(temp_dir, f"{doc_id}_{safe_name}")
@@ -422,31 +436,44 @@ async def upload_document(
     with open(temp_file_path, "wb") as f:
         f.write(file_bytes)
 
-    # Register initial document record in database with 'parsing' status
+    # Register or reset document record in database with 'parsing' status
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO documents (
-                    document_id, company, ticker, report_type, report_fiscal_year,
-                    source_url, file_name, storage_path, file_hash_sha256, status, user_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (document_id) DO NOTHING;
-                """, 
-                (
-                    doc_id,
-                    "General",
-                    "DOC",
-                    doc_type,
-                    2026,
-                    "user_upload",
-                    safe_display_name,
-                    storage_key,
-                    file_hash,
-                    "parsing",
-                    user.user_id
-                )   
-            )
+            if existing_doc_id:
+                cur.execute(
+                    """
+                    UPDATE documents
+                    SET report_type = %s,
+                        file_name = %s,
+                        storage_path = %s,
+                        status = 'parsing'
+                    WHERE document_id = %s AND user_id = %s;
+                    """,
+                    (doc_type, safe_display_name, storage_key, doc_id, user.user_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO documents (
+                        document_id, company, ticker, report_type, report_fiscal_year,
+                        source_url, file_name, storage_path, file_hash_sha256, status, user_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (document_id) DO NOTHING;
+                    """, 
+                    (
+                        doc_id,
+                        "General",
+                        "DOC",
+                        doc_type,
+                        2026,
+                        "user_upload",
+                        safe_display_name,
+                        storage_key,
+                        file_hash,
+                        "parsing",
+                        user.user_id
+                    )   
+                )
             conn.commit()
 
     # Evict expired in-memory progress entries before inserting

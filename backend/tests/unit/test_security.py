@@ -140,3 +140,16 @@ class TestRateLimiterAndJWT:
                 verify_supabase_jwt("not.a.valid.jwt")
             assert exc.value.status_code == 401
             assert "internal_jwks_secret_trace" not in exc.value.detail
+
+    def test_storage_get_signed_url_supports_lowercase_signed_url_key(self):
+        from app.integrations.storage import SupabaseStorageService
+
+        mock_client = MagicMock()
+        mock_client.storage.from_.return_value.create_signed_url.return_value = {
+            "signedUrl": "/storage/v1/object/sign/original-documents/doc.pdf?token=abc"
+        }
+        with patch("app.integrations.storage.create_client", return_value=mock_client):
+            svc = SupabaseStorageService(supabase_url="https://example.supabase.co", supabase_key="key")
+            url = svc.get_signed_url("doc.pdf")
+
+        assert url == "https://example.supabase.co/storage/v1/object/sign/original-documents/doc.pdf?token=abc"

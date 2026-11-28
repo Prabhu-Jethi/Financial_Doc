@@ -174,7 +174,7 @@ class FinancialRetriever(BaseRetriever):
                             "physical_page": phys_page,
                             "section": meta.get("section") or sec_default,
                         })
-                    docs.append(Document(page_content=row[5], metadata=meta))
+                        docs.append(Document(page_content=row[5], metadata=meta))
         except Exception:
             ## Full-text query encounters an issue, return empty
             return []

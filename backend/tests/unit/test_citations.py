@@ -290,6 +290,35 @@ class TestCitationsAndGrounding:
         assert citations[0].source_page == 71
         assert citations[0].printed_page == "68"
 
+    def test_audit_grounding_accepts_negative_calculated_values(self):
+        """Negative calculated display_value (e.g. -2.80%) must be recognized as grounded."""
+        doc = Document(
+            page_content="Total net sales 383,285 394,328",
+            metadata={"document_id": "aapl-2023-10k", "printed_page": "29"}
+        )
+        calculations = [
+            CalculationLedgerItem(
+                formula="((Net Sales Current - Prior) / |Prior|) * 100",
+                display_value="-2.80",
+                unit="%",
+                operands=[
+                    CalculationOperand(name="Net Sales FY2023", raw_value="383,285", printed_page="29"),
+                    CalculationOperand(name="Net Sales FY2022", raw_value="394,328", printed_page="29"),
+                ]
+            )
+        ]
+        answer = "Apple's total net sales declined from $394,328 million to $383,285 million, a -2.80% change (page 29)."
+
+        audit = self.evidence_service.audit_numerical_grounding(
+            answer_text=answer,
+            docs=[doc],
+            calculations=calculations,
+            facts=[]
+        )
+
+        assert audit["is_grounded"] is True
+        assert audit["unverified_numbers"] == []
+
 
 
 def main():
